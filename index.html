@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life Update: — A clickable prototype</title>
+<style>
+  :root {
+    --cream: #FAF6EE;
+    --paper: #FFFFFF;
+    --ink: #1F1F1F;
+    --ink-soft: #555555;
+    --ink-muted: #8B8B8B;
+    --accent: #C04F2D;
+    --yellow: #E8B33C;
+    --border: #E8E2D5;
+    --border-strong: #D4CCB8;
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--cream);
+    font-family: var(--sans);
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+  }
+
+  .landing {
+    max-width: 540px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .eyebrow {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--accent);
+    letter-spacing: 0.3px;
+    margin-bottom: 8px;
+  }
+
+  .logo {
+    font-family: var(--serif);
+    font-size: 84px;
+    font-weight: 400;
+    letter-spacing: -2.5px;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+  .logo .brand-colon {
+    color: var(--accent);
+    display: inline-block;
+    transition: transform 0.3s ease;
+  }
+  .logo:hover .brand-colon {
+    transform: rotate(20deg) scale(1.15);
+  }
+
+  .tagline {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 20px;
+    color: var(--ink-soft);
+    margin-bottom: 40px;
+    line-height: 1.4;
+  }
+
+  .body-text {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    margin-bottom: 28px;
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cta {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--cream);
+    text-decoration: none;
+    padding: 18px 36px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: var(--sans);
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+    margin-bottom: 16px;
+  }
+  .cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(31, 31, 31, 0.18);
+  }
+  .cta:active {
+    transform: scale(0.97);
+  }
+
+  .small {
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 40px auto;
+    max-width: 440px;
+    text-align: left;
+  }
+  .feature {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .feature .emoji {
+    font-size: 18px;
+    margin-bottom: 4px;
+    display: block;
+  }
+  .feature .feature-title {
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .feature .feature-desc {
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+
+  .divider {
+    border-top: 1px solid var(--border-strong);
+    margin: 32px 0;
+    position: relative;
+  }
+  .divider span {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--cream);
+    padding: 0 14px;
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--ink-muted);
+    font-size: 13px;
+  }
+
+  .footnote {
+    margin-top: 32px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+  }
+
+  @media (max-width: 520px) {
+    .logo { font-size: 60px; }
+    .tagline { font-size: 17px; }
+    .feature-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="landing">
+    <div class="eyebrow">a clickable prototype</div>
+    <div class="logo">Life Update<span class="brand-colon">:</span></div>
+    <p class="tagline">The social app you open once a month, then close.</p>
+
+    <p class="body-text">
+      This is early. The flows work, the data is fake, the photos are real. Click around like you mean it.
+    </p>
+
+    <a href="prototype.html" class="cta">Open the prototype →</a>
+    <p class="small">Use the dropdown in the top bar to jump between screens.</p>
+
+    <div class="feature-grid">
+      <div class="feature">
+        <span class="emoji">📝</span>
+        <div class="feature-title">Write a post</div>
+        <div class="feature-desc">Edit any section. Hide what you don't want to share.</div>
+      </div>
+      <div class="feature">
+        <span class="emoji">🎉</span>
+        <div class="feature-title">Hit publish</div>
+        <div class="feature-desc">There's a small reward for clicking that button.</div>
+      </div>
+      <div class="feature">
+        <span class="emoji">🔍</span>
+        <div class="feature-title">Browse the feed</div>
+        <div class="feature-desc">See what your fake friends have been up to.</div>
+      </div>
+      <div class="feature">
+        <span class="emoji">📄</span>
+        <div class="feature-title">Open the PRD</div>
+        <div class="feature-desc">Top right of the prototype. Open decisions live there.</div>
+      </div>
+    </div>
+
+    <div class="divider"><span>tell us what you think</span></div>
+
+    <p class="footnote">
+      We want to know which screen made you raise an eyebrow, which feature you'd pay for, and which decision in the PRD you'd flip. Send notes.
+    </p>
+  </div>
+</div>
+
+</body>
+</html>

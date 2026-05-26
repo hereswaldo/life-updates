@@ -1,0 +1,3299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life Update: — Prototype</title>
+<style>
+  :root {
+    --cream: #FAF6EE;
+    --paper: #FFFFFF;
+    --ink: #1F1F1F;
+    --ink-soft: #555555;
+    --ink-muted: #8B8B8B;
+    --accent: #C04F2D;
+    --accent-soft: #F0DDD2;
+    --border: #E8E2D5;
+    --border-strong: #D4CCB8;
+    --green: #6B7F3D;
+    --yellow: #E8B33C;
+    --blue: #6B8AC4;
+    --coral: #E89A8F;
+    --plum: #8E5B82;
+    --shadow: rgba(31, 31, 31, 0.06);
+    --shadow-strong: rgba(31, 31, 31, 0.12);
+    --serif: Georgia, "Times New Roman", "Times", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #EFEAE0;
+    font-family: var(--sans);
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ============ REVIEW PANEL ============ */
+  .review-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--ink);
+    color: var(--cream);
+    padding: 12px 20px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .review-panel .label {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--accent-soft);
+  }
+  .review-panel select {
+    background: #333;
+    color: var(--cream);
+    border: 1px solid #555;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--sans);
+    cursor: pointer;
+  }
+  .review-panel .nav-btn {
+    background: transparent;
+    border: 1px solid #555;
+    color: var(--cream);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .review-panel .nav-btn:hover { background: #333; }
+  .review-panel .flow-tag {
+    background: var(--accent);
+    color: var(--cream);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ============ DEVICE FRAME ============ */
+  .stage {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 80px 20px 40px;
+    min-height: 100vh;
+  }
+
+  .device {
+    width: 390px;
+    height: 844px;
+    background: var(--cream);
+    border-radius: 48px;
+    border: 12px solid #1A1A1A;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.15);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .notch {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 28px;
+    background: #1A1A1A;
+    border-radius: 0 0 18px 18px;
+    z-index: 50;
+  }
+
+  .status-bar {
+    height: 40px;
+    padding: 12px 24px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    flex-shrink: 0;
+  }
+  .status-bar .icons { display: flex; gap: 4px; align-items: center; font-size: 12px; }
+
+  .screen-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+  }
+  .screen-container::-webkit-scrollbar { display: none; }
+
+  .screen {
+    display: none;
+    flex-direction: column;
+    min-height: 100%;
+    padding: 0 24px 40px;
+  }
+  .screen.active { display: flex; }
+
+  /* ============ TYPOGRAPHY ============ */
+  h1.serif {
+    font-family: var(--serif);
+    font-size: 32px;
+    line-height: 1.15;
+    font-weight: 400;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+  }
+  h2.serif {
+    font-family: var(--serif);
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 400;
+    color: var(--ink);
+  }
+  .eyebrow {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--accent);
+    letter-spacing: 0.3px;
+  }
+  .body { font-size: 15px; line-height: 1.5; color: var(--ink-soft); }
+  .small { font-size: 13px; color: var(--ink-muted); }
+  .label-up {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
+
+  /* ============ COMPONENTS ============ */
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0 20px;
+  }
+  .top-bar .back {
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    font-size: 15px;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .top-bar .title {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 400;
+  }
+  .top-bar .action {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .top-bar .action:disabled { color: var(--ink-muted); cursor: default; }
+
+  .btn {
+    border: none;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 16px 24px;
+    border-radius: 14px;
+    width: 100%;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--cream);
+  }
+  .btn-secondary {
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--border-strong);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 12px 20px;
+  }
+  .btn-accent {
+    background: var(--accent);
+    color: var(--cream);
+  }
+
+  .input {
+    width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--border-strong);
+    padding: 16px 18px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-family: var(--sans);
+    color: var(--ink);
+  }
+  .input:focus { outline: none; border-color: var(--accent); }
+
+  .field-label {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+  }
+
+  .integration-row {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+  .integration-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .integration-meta { flex: 1; min-width: 0; }
+  .integration-meta .name { font-weight: 600; font-size: 15px; }
+  .integration-meta .desc { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+  .integration-meta .connected-as { font-size: 12px; color: var(--green); margin-top: 4px; font-weight: 500; }
+  .integration-btn {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-strong);
+    background: var(--paper);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .integration-btn.connected {
+    background: var(--accent-soft);
+    border-color: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--cream);
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+  .avatar.lg { width: 64px; height: 64px; font-size: 22px; }
+
+  .friend-row {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .friend-row .name { font-weight: 600; font-size: 15px; }
+  .friend-row .handle { font-size: 13px; color: var(--ink-muted); }
+  .friend-row .info { flex: 1; }
+  .follow-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    background: var(--ink);
+    color: var(--cream);
+    border: none;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .follow-btn.followed {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* ============ POST CARDS ============ */
+  .post-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+  .post-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .post-header .meta { flex: 1; }
+  .post-header .author { font-weight: 600; font-size: 16px; }
+  .post-header .loc { font-size: 12px; color: var(--ink-muted); font-style: italic; }
+  .post-header .date {
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--accent);
+    font-size: 14px;
+  }
+  .post-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px -22px;
+  }
+  .post-section {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    align-items: flex-start;
+  }
+  .post-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+  .post-section-body { flex: 1; min-width: 0; }
+  .post-section-title { font-size: 13px; color: var(--ink-muted); margin-bottom: 2px; }
+  .post-section-value { font-size: 15px; color: var(--ink); font-weight: 500; }
+  .post-section-sub { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+  .stars { color: var(--accent); font-size: 13px; letter-spacing: 1px; }
+
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .photo {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #D4CCB8, #B8AC93);
+  }
+  .photo.p1 { background: linear-gradient(135deg, #C9A87C, #8B6B3E); }
+  .photo.p2 { background: linear-gradient(135deg, #87A878, #4F6D40); }
+  .photo.p3 { background: linear-gradient(135deg, #B8553A, #7C2E1A); }
+  .photo.p4 { background: linear-gradient(135deg, #6B7F8C, #3A4F5E); }
+  .photo.p5 { background: linear-gradient(135deg, #E8C39E, #B8916A); }
+  .photo.p6 { background: linear-gradient(135deg, #A8B8C9, #6A7D90); }
+  .photo.alex-1 { background: url('assets/photo-1.jpeg') center/cover no-repeat; }
+  .photo.alex-2 { background: url('assets/photo-2.jpeg') center/cover no-repeat; }
+  .photo.alex-3 { background: url('assets/photo-3.jpeg') center/cover no-repeat; }
+  .photo.alex-4 { background: url('assets/photo-4.jpeg') center/cover no-repeat; }
+  .photo.alex-5 { background: url('assets/photo-5.jpeg') center/cover no-repeat; }
+  .photo.alex-6 { background: url('assets/photo-6.jpeg') center/cover no-repeat; }
+  .photo.large { aspect-ratio: 4/3; margin-bottom: 8px; }
+
+  .post-text {
+    font-family: var(--serif);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink);
+    font-style: italic;
+    padding: 12px 0;
+  }
+  .post-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink-muted);
+    font-size: 13px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+  }
+
+  /* ============ COMMENTS ============ */
+  .comment {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .comment:last-child { border-bottom: none; }
+  .comment-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .comment-author { font-weight: 600; font-size: 14px; }
+  .comment-time { font-size: 12px; color: var(--ink-muted); }
+  .comment-text { font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
+
+  /* ============ EDITOR ============ */
+  .editor-section {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .editor-section.hidden {
+    opacity: 0.45;
+    background: transparent;
+  }
+  .editor-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .editor-head .label-up { flex: 1; }
+  .editor-toggle-btn {
+    background: transparent;
+    border: none;
+    color: var(--ink-muted);
+    font-size: 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .editor-toggle-btn:hover { background: var(--cream); }
+  .editor-toggle-btn.hide { color: var(--accent); }
+
+  /* ============ TOGGLE ============ */
+  .toggle {
+    position: relative;
+    width: 50px;
+    height: 30px;
+    background: var(--border-strong);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .toggle.on { background: var(--green); }
+  .toggle.on::after { transform: translateX(20px); }
+
+  /* ============ SEGMENTED CONTROL ============ */
+  .seg {
+    display: flex;
+    background: var(--border);
+    padding: 3px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .seg button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-radius: 9px;
+  }
+  .seg button.on {
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 1px 3px var(--shadow);
+  }
+
+  /* ============ TAB BAR ============ */
+  .tab-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(250, 246, 238, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 10px 16px 28px;
+    z-index: 10;
+  }
+  .tab-bar button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--ink-muted);
+    cursor: pointer;
+    padding: 6px 0;
+  }
+  .tab-bar button.on { color: var(--accent); }
+  .tab-bar button .tb-icon { font-size: 22px; }
+
+  /* ============ NOTIFICATION BANNER ============ */
+  .notif-banner {
+    position: absolute;
+    top: 14px;
+    left: 12px;
+    right: 12px;
+    background: rgba(31, 31, 31, 0.92);
+    color: var(--cream);
+    padding: 12px 16px;
+    border-radius: 14px;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    transform: translateY(-120%);
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
+    backdrop-filter: blur(20px);
+  }
+  .notif-banner.show { transform: translateY(0); opacity: 1; }
+  .notif-banner .notif-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .notif-banner .notif-body { flex: 1; min-width: 0; }
+  .notif-banner .notif-title { font-weight: 600; font-size: 13px; }
+  .notif-banner .notif-text { font-size: 12px; color: rgba(250, 246, 238, 0.8); margin-top: 2px; }
+
+  /* ============ LOCK SCREEN ============ */
+  .lock-screen {
+    background: linear-gradient(160deg, #2A2A2A 0%, #1A1A1A 100%);
+    color: var(--cream);
+    min-height: 100%;
+    padding: 60px 24px 40px;
+    margin: 0 -24px -40px;
+    display: flex;
+    flex-direction: column;
+  }
+  .lock-time {
+    font-family: var(--serif);
+    font-size: 80px;
+    text-align: center;
+    font-weight: 300;
+    margin-top: 40px;
+  }
+  .lock-date {
+    text-align: center;
+    font-size: 18px;
+    opacity: 0.8;
+    margin-bottom: 80px;
+  }
+  .lock-notif {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .lock-notif .icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--cream);
+    flex-shrink: 0;
+  }
+  .lock-notif .body { flex: 1; }
+  .lock-notif .app { font-size: 12px; opacity: 0.7; margin-bottom: 2px; }
+  .lock-notif .title { font-weight: 600; font-size: 14px; }
+  .lock-notif .text { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .lock-notif .time { font-size: 11px; opacity: 0.6; }
+
+  /* ============ COUNTDOWN ============ */
+  .countdown-tile {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px 24px;
+    text-align: center;
+    margin: 32px 0;
+  }
+  .countdown-tile .num {
+    font-family: var(--serif);
+    font-size: 80px;
+    line-height: 1;
+    color: var(--accent);
+    font-weight: 400;
+  }
+  .countdown-tile .lbl {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-soft);
+    margin-top: 8px;
+  }
+
+  /* ============ MASTHEAD ============ */
+  .masthead {
+    text-align: center;
+    padding: 20px 0 12px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 20px;
+  }
+  .masthead .logo {
+    font-family: var(--serif);
+    font-size: 36px;
+    font-weight: 400;
+    letter-spacing: -1px;
+  }
+  .masthead .tagline {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-top: 2px;
+  }
+
+  .feed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .feed-header .month {
+    font-family: var(--serif);
+    font-size: 22px;
+  }
+  .feed-actions { display: flex; gap: 12px; }
+  .icon-btn {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  /* ============ DISCOVERY ============ */
+  .filter-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .chip {
+    background: var(--paper);
+    border: 1px solid var(--border-strong);
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+  .chip.on {
+    background: var(--ink);
+    color: var(--cream);
+    border-color: var(--ink);
+  }
+  .quick-prompts { margin-top: 20px; }
+  .prompt-item {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .prompt-item:hover { border-color: var(--accent); }
+  .discovery-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 12px;
+  }
+  .discovery-card .item-name {
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.25;
+  }
+  .discovery-card .item-author {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-top: 2px;
+  }
+  .discovery-card .rating-line {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .friend-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .friend-pill {
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: var(--cream);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .link-out {
+    margin-top: 12px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ============ SETTINGS ============ */
+  .settings-group {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .settings-row {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row .label { flex: 1; font-size: 15px; }
+  .settings-row .val { font-size: 14px; color: var(--ink-muted); }
+
+  /* ============ PHOTO PICKER ============ */
+  .picker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .picker-photo {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+  }
+  .picker-photo .check {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .picker-photo.selected .check {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* ============ PLAYFUL FLOURISHES ============ */
+  .brand-colon {
+    color: var(--accent);
+    display: inline-block;
+    transition: transform 0.3s ease;
+  }
+  .brand-colon:hover { transform: rotate(15deg) scale(1.15); }
+
+  #s3-1 .post-card:nth-of-type(1) { transform: rotate(-0.4deg); }
+  #s3-1 .post-card:nth-of-type(2) { transform: rotate(0.6deg); }
+  #s3-1 .post-card:nth-of-type(3) { transform: rotate(-0.3deg); }
+  #s3-1 .post-card:nth-of-type(4) { transform: rotate(0.5deg); }
+  #s3-1 .post-card:nth-of-type(5) { transform: rotate(-0.5deg); }
+  #s3-1 .post-card { transition: transform 0.25s ease; }
+  #s3-1 .post-card:hover { transform: rotate(0) scale(1.01); }
+
+  .btn { transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s; }
+  .btn:active { transform: scale(0.95); }
+  .btn-accent:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(192, 79, 45, 0.35); }
+
+  @keyframes confetti-fall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0.3; }
+  }
+  .confetti-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+  }
+  .confetti-piece {
+    position: absolute;
+    top: -20px;
+    will-change: transform;
+  }
+
+  /* ============ MODAL ============ */
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .modal-overlay.show { display: flex; opacity: 1; }
+  .modal {
+    background: var(--paper);
+    border-radius: 18px;
+    padding: 22px 20px 18px;
+    max-width: 360px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    margin-bottom: 30px;
+    transform: translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .modal-overlay.show .modal { transform: translateY(0); }
+  .modal-title {
+    font-family: var(--serif);
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+  .modal-body {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .share-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--cream);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .share-row:hover { background: var(--border); }
+  .share-row .icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .share-row .share-label { flex: 1; font-weight: 500; font-size: 14px; }
+  .toast {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--cream);
+    padding: 10px 18px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+    z-index: 300;
+    pointer-events: none;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-3deg); }
+    50% { transform: rotate(0); }
+    75% { transform: rotate(3deg); }
+  }
+  .wiggle { animation: wiggle 0.5s ease-in-out; }
+
+  .sticker {
+    display: inline-block;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    transform: rotate(-3deg);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    margin-left: 6px;
+    background: var(--yellow);
+    color: var(--ink);
+  }
+  .sticker.blue { background: var(--blue); color: white; }
+  .sticker.coral { background: var(--coral); color: white; }
+
+  .post-icon.music { background: rgba(107, 138, 196, 0.18); }
+  .post-icon.books { background: rgba(232, 154, 143, 0.28); }
+  .post-icon.workouts { background: rgba(135, 168, 120, 0.28); }
+  .post-icon.watched { background: rgba(142, 91, 130, 0.2); }
+  .post-icon.photos { background: rgba(232, 179, 60, 0.28); }
+  .post-icon.restaurant { background: rgba(232, 154, 143, 0.28); }
+  .post-icon.recipe { background: rgba(232, 179, 60, 0.28); }
+  .post-icon.trips { background: rgba(107, 138, 196, 0.18); }
+  .post-icon.life { background: rgba(192, 79, 45, 0.15); }
+  .post-icon.custom { background: rgba(232, 179, 60, 0.28); }
+
+  /* ============ POST TITLES ============ */
+  .post-title-input {
+    font-family: var(--serif);
+    font-size: 28px;
+    line-height: 1.2;
+    border: none;
+    background: transparent;
+    width: 100%;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border-strong);
+    margin-bottom: 20px;
+    color: var(--ink);
+    outline: none;
+    resize: none;
+  }
+  .post-title-input:focus {
+    border-bottom-color: var(--accent);
+    border-bottom-style: solid;
+  }
+  .post-title-input::placeholder {
+    color: var(--ink-muted);
+    font-style: italic;
+    font-weight: 400;
+  }
+  .post-title-display {
+    font-family: var(--serif);
+    font-size: 22px;
+    line-height: 1.25;
+    color: var(--ink);
+    margin: 4px 0 14px;
+  }
+  .post-title-large {
+    font-family: var(--serif);
+    font-size: 30px;
+    line-height: 1.15;
+    margin: 4px 0 12px;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+  }
+
+  /* ============ PRD ============ */
+  .prd-screen { padding: 0 22px 60px; }
+  .prd-meta {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .prd-meta p {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+    line-height: 1.5;
+  }
+  .prd-meta p:last-child { margin-bottom: 0; }
+  .prd-section-title {
+    font-size: 22px;
+    margin-top: 28px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .prd-body {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .prd-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .prd-list li {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    padding-left: 22px;
+    position: relative;
+    margin-bottom: 8px;
+  }
+  .prd-list li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--green);
+    font-weight: 700;
+  }
+  .decision-block {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+  }
+  .decision-num {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .decision-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.25;
+    margin-bottom: 8px;
+  }
+  .decision-desc {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+  .decision-options {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .decision-options strong { color: var(--ink); }
+  .decision-rec {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink);
+    padding: 10px 12px;
+    background: var(--accent-soft);
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+  .decision-rec strong { color: var(--accent); }
+  .risk-item {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 12px 14px;
+    border-radius: 0 12px 12px 0;
+    margin-bottom: 10px;
+  }
+  .risk-item .risk-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .risk-item .risk-body {
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    gap: 12px;
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-row .name { color: var(--ink); flex: 1; }
+  .metric-row .target { color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .prd-screen .masthead { padding-top: 14px; margin-bottom: 18px; }
+
+  /* ============ MISC ============ */
+  .center { text-align: center; }
+  .mt-md { margin-top: 20px; }
+  .mt-lg { margin-top: 32px; }
+  .mb-md { margin-bottom: 20px; }
+  .mb-sm { margin-bottom: 12px; }
+  .mb-xs { margin-bottom: 8px; }
+  .spacer { flex: 1; }
+  .stack > * + * { margin-top: 12px; }
+  .with-tabs { padding-bottom: 100px; }
+
+  .check-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    margin: 40px auto 24px;
+  }
+
+  /* Avatar colors */
+  .av-sarah { background: linear-gradient(135deg, #C9A87C, #8B6B3E); }
+  .av-mike { background: linear-gradient(135deg, #6B7F8C, #3A4F5E); }
+  .av-dani { background: linear-gradient(135deg, #87A878, #4F6D40); }
+  .av-jess { background: linear-gradient(135deg, #B8553A, #7C2E1A); }
+  .av-alex { background: linear-gradient(135deg, #A8859B, #6B4F60); }
+  .av-daniel { background: linear-gradient(135deg, #8E5B82, #5C3A55); }
+  .av-dl { background: linear-gradient(135deg, #E8B33C, #B88A1D); }
+
+  /* ============ MOBILE ============ */
+  @media (max-width: 480px) {
+    .stage { padding: 70px 0 20px; }
+    .device {
+      width: 100%;
+      max-width: 100%;
+      height: calc(100vh - 90px);
+      border-radius: 0;
+      border-width: 0;
+      border-top: 12px solid #1A1A1A;
+    }
+    .review-panel { font-size: 11px; padding: 8px 12px; gap: 8px; }
+    .review-panel .label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="review-panel">
+  <span class="label">Life Update: · prototype</span>
+  <span class="flow-tag" id="flow-tag">Flow 1</span>
+  <button class="nav-btn" onclick="prevScreen()">← Prev</button>
+  <button class="nav-btn" onclick="nextScreen()">Next →</button>
+  <select id="screen-jump" onchange="jumpScreen(this.value)">
+    <optgroup label="Flow 1 — Signup">
+      <option value="s1-1">1.1 Invite gate</option>
+      <option value="s1-2">1.2 Auth</option>
+      <option value="s1-3">1.3 Profile</option>
+      <option value="s1-4">1.4 Integrations intro</option>
+      <option value="s1-5">1.5 Integration picker</option>
+      <option value="s1-6">1.6 Find friends</option>
+      <option value="s1-7">1.7 Countdown</option>
+    </optgroup>
+    <optgroup label="Flow 2 — Posting">
+      <option value="s2-1">2.1 Lock screen</option>
+      <option value="s2-2">2.2 Compose intro</option>
+      <option value="s2-3">2.3 Post editor</option>
+      <option value="s2-3b">2.3b Empty-integration editor</option>
+      <option value="s2-4">2.4 Photo picker</option>
+      <option value="s2-5">2.5 Preview</option>
+      <option value="s2-6">2.6 Published</option>
+    </optgroup>
+    <optgroup label="Flow 3 — Scrolling">
+      <option value="s3-1">3.1 Home feed</option>
+      <option value="s3-2">3.2 Post detail</option>
+      <option value="s3-3">3.3 Discovery search</option>
+      <option value="s3-4">3.4 Discovery results</option>
+    </optgroup>
+    <optgroup label="Settings">
+      <option value="s4-1">4.1 Settings</option>
+    </optgroup>
+    <optgroup label="Spec">
+      <option value="prd">📄 PRD (open decisions)</option>
+    </optgroup>
+  </select>
+  <button class="nav-btn" onclick="viewPRD()" style="border-color: var(--accent); color: var(--accent-soft); background: rgba(192, 79, 45, 0.15);">📄 PRD</button>
+  <button class="nav-btn" onclick="showNotif()">Demo notif</button>
+</div>
+
+<div class="stage">
+  <div class="device">
+    <div class="notch"></div>
+    <div class="status-bar">
+      <span>9:41</span>
+      <span class="icons">●●●● 5G ▮▮</span>
+    </div>
+
+    <div class="screen-container">
+
+      <!-- Modal overlay -->
+      <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal">
+          <div class="modal-title" id="modal-title"></div>
+          <div class="modal-body" id="modal-body"></div>
+          <div class="modal-actions" id="modal-actions"></div>
+        </div>
+      </div>
+
+      <!-- Toast -->
+      <div class="toast" id="toast"></div>
+
+      <!-- Notification banner (overlay) -->
+      <div class="notif-banner" id="notif">
+        <div class="notif-icon">
+          <span style="font-family: var(--serif); font-style: italic; color: var(--cream);">L</span>
+        </div>
+        <div class="notif-body">
+          <div class="notif-title">Christina S. commented</div>
+          <div class="notif-text">"SEATTLE?? when did this happen"</div>
+        </div>
+      </div>
+
+      <!-- ============ FLOW 1.1 INVITE GATE ============ -->
+      <div class="screen active" id="s1-1">
+        <div style="flex:1; display:flex; flex-direction:column; justify-content:center; padding: 40px 0;">
+          <div class="center mb-md">
+            <div style="font-family: var(--serif); font-size: 52px; letter-spacing: -2px;">Life Update<span class="brand-colon">:</span></div>
+            <div class="eyebrow">a quieter way to stay in touch</div>
+          </div>
+
+          <div style="margin-top: 60px;">
+            <p class="body center mb-md" style="padding: 0 12px;">The social app you open once a month, then close.</p>
+
+            <div style="border-top: 1px solid var(--border-strong); margin: 32px 0; position: relative;">
+              <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--cream); padding: 0 12px; font-family: var(--serif); font-style: italic; color: var(--ink-muted); font-size: 13px;">enter</span>
+            </div>
+
+            <label class="field-label">Invite code</label>
+            <input class="input mb-sm" value="DENVER-2026" />
+
+            <button class="btn btn-primary mt-md" onclick="goto('s1-2')">Continue</button>
+
+            <p class="small center mt-md">No code? You need a friend who's already here.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ FLOW 1.2 AUTH ============ -->
+      <div class="screen" id="s1-2">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s1-1')">← Back</button>
+          <span></span>
+          <span></span>
+        </div>
+
+        <div style="flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom: 40px;">
+          <h1 class="serif mb-sm">Welcome.</h1>
+          <p class="body mb-md">Let's set up your account.</p>
+
+          <div class="stack mt-lg">
+            <button class="btn btn-primary" onclick="goto('s1-3')">
+              <span style="margin-right: 8px;"></span> Continue with Apple
+            </button>
+            <button class="btn btn-secondary" onclick="goto('s1-3')">Continue with phone</button>
+          </div>
+
+          <p class="small center mt-lg">By continuing you agree to our<br>terms & privacy policy.</p>
+        </div>
+      </div>
+
+      <!-- ============ FLOW 1.3 PROFILE ============ -->
+      <div class="screen" id="s1-3">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s1-2')">← Back</button>
+          <span></span>
+          <span></span>
+        </div>
+
+        <h1 class="serif mb-md">Make it yours.</h1>
+
+        <div class="center mb-md">
+          <div class="avatar av-alex lg" style="margin: 0 auto;">+</div>
+          <p class="small mt-md" style="color: var(--accent); font-weight: 600;">Add photo</p>
+        </div>
+
+        <label class="field-label mt-md">First name</label>
+        <input class="input mb-md" value="Alex" />
+
+        <label class="field-label">Handle</label>
+        <input class="input mb-md" value="@alexw" />
+
+        <p class="small">Friends can search for you by handle.</p>
+
+        <div class="spacer"></div>
+
+        <button class="btn btn-primary mt-md" onclick="goto('s1-4')">Continue</button>
+      </div>
+
+      <!-- ============ FLOW 1.4 INTEGRATIONS INTRO ============ -->
+      <div class="screen" id="s1-4">
+        <div style="flex:1; display:flex; flex-direction:column; justify-content:center; padding: 40px 0;">
+          <span class="eyebrow center mb-sm">step 2 of 3</span>
+          <h1 class="serif center mb-md" style="font-size: 38px;">Connect your life.</h1>
+
+          <p class="body center mb-md" style="padding: 0 16px;">Your monthly post pulls from apps you already use. Connect what you want. Skip what you don't.</p>
+
+          <p class="small center" style="padding: 0 24px;">You can change these anytime in settings.</p>
+        </div>
+
+        <button class="btn btn-primary" onclick="goto('s1-5')">Let's go</button>
+        <button class="btn btn-ghost mt-md" onclick="goto('s1-6')">Skip for now</button>
+      </div>
+
+      <!-- ============ FLOW 1.5 INTEGRATION PICKER ============ -->
+      <div class="screen" id="s1-5">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s1-4')">← Back</button>
+          <span class="title">Integrations</span>
+          <button class="action" onclick="goto('s1-6')">Skip</button>
+        </div>
+
+        <p class="small mb-md">Tap to connect. We'll only pull what you let us.</p>
+
+        <div class="integration-row">
+          <div class="integration-icon" style="background: #1ED760; color: white;">♫</div>
+          <div class="integration-meta">
+            <div class="name">Spotify</div>
+            <div class="desc">Top songs each month</div>
+            <div class="connected-as" id="int-spotify-status">Connected as alexw</div>
+          </div>
+          <button class="integration-btn connected" id="int-spotify" onclick="toggleIntegration('spotify')">Connected ✓</button>
+        </div>
+
+        <div class="integration-row">
+          <div class="integration-icon" style="background: #D9A45A; color: white; font-family: var(--serif);">H</div>
+          <div class="integration-meta">
+            <div class="name">Hardcover</div>
+            <div class="desc">Books you finished</div>
+            <div class="connected-as" id="int-hardcover-status">Connected as alexw_reads</div>
+          </div>
+          <button class="integration-btn connected" id="int-hardcover" onclick="toggleIntegration('hardcover')">Connected ✓</button>
+        </div>
+
+        <div class="integration-row">
+          <div class="integration-icon" style="background: #FC4C02; color: white;">▲</div>
+          <div class="integration-meta">
+            <div class="name">Strava</div>
+            <div class="desc">Runs, rides, hikes</div>
+            <div class="connected-as" id="int-strava-status">Connected as alex_wald</div>
+          </div>
+          <button class="integration-btn connected" id="int-strava" onclick="toggleIntegration('strava')">Connected ✓</button>
+        </div>
+
+        <div class="integration-row">
+          <div class="integration-icon" style="background: #FA114F; color: white;">♥</div>
+          <div class="integration-meta">
+            <div class="name">Apple Health</div>
+            <div class="desc">Workouts & activity</div>
+            <div class="connected-as" id="int-health-status">Connected</div>
+          </div>
+          <button class="integration-btn connected" id="int-health" onclick="toggleIntegration('health')">Connected ✓</button>
+        </div>
+
+        <div class="integration-row">
+          <div class="integration-icon" style="background: #C9A87C; color: white;">◉</div>
+          <div class="integration-meta">
+            <div class="name">Apple Photos</div>
+            <div class="desc">Your best shots</div>
+            <div class="connected-as" id="int-photos-status">Connected</div>
+          </div>
+          <button class="integration-btn connected" id="int-photos" onclick="toggleIntegration('photos')">Connected ✓</button>
+        </div>
+
+        <div class="integration-row">
+          <div class="integration-icon" style="background: #ED1C24; color: white;">▶</div>
+          <div class="integration-meta">
+            <div class="name">Trakt</div>
+            <div class="desc">Movies & shows</div>
+            <div class="connected-as" id="int-trakt-status">Connected as alexw_watches</div>
+          </div>
+          <button class="integration-btn connected" id="int-trakt" onclick="toggleIntegration('trakt')">Connected ✓</button>
+        </div>
+
+        <button class="btn btn-primary mt-md" onclick="goto('s1-6')">Continue</button>
+      </div>
+
+      <!-- ============ FLOW 1.6 FIND FRIENDS ============ -->
+      <div class="screen" id="s1-6">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s1-5')">← Back</button>
+          <span class="title">Friends</span>
+          <span></span>
+        </div>
+
+        <h2 class="serif mb-sm">Find your people.</h2>
+        <p class="body mb-md">You came in on the Denver invite. Here's who else is on it.</p>
+
+        <div class="friend-row">
+          <div class="avatar av-sarah">CS</div>
+          <div class="info">
+            <div class="name">Christina Savinar</div>
+            <div class="handle">@christinas · Denver</div>
+          </div>
+          <button class="follow-btn" onclick="toggleFollow(this)">Follow</button>
+        </div>
+
+        <div class="friend-row">
+          <div class="avatar av-mike">CC</div>
+          <div class="info">
+            <div class="name">Carolyn Chupa</div>
+            <div class="handle">@carolynchupa · Brooklyn</div>
+          </div>
+          <button class="follow-btn" onclick="toggleFollow(this)">Follow</button>
+        </div>
+
+        <div class="friend-row">
+          <div class="avatar av-dani">JW</div>
+          <div class="info">
+            <div class="name">Jordan Watkins</div>
+            <div class="handle">@jordanw · Denver</div>
+          </div>
+          <button class="follow-btn" onclick="toggleFollow(this)">Follow</button>
+        </div>
+
+        <div class="friend-row">
+          <div class="avatar av-jess">ZG</div>
+          <div class="info">
+            <div class="name">Zachary Gwin</div>
+            <div class="handle">@zachg · Portland</div>
+          </div>
+          <button class="follow-btn" onclick="toggleFollow(this)">Follow</button>
+        </div>
+
+        <div class="friend-row">
+          <div class="avatar av-daniel">ES</div>
+          <div class="info">
+            <div class="name">Elisa Sanborn</div>
+            <div class="handle">@elisas · Denver</div>
+          </div>
+          <button class="follow-btn" onclick="toggleFollow(this)">Follow</button>
+        </div>
+
+        <div class="friend-row">
+          <div class="avatar av-dl">DL</div>
+          <div class="info">
+            <div class="name">Daniel Luke</div>
+            <div class="handle">@danielluke · Austin</div>
+          </div>
+          <button class="follow-btn" onclick="toggleFollow(this)">Follow</button>
+        </div>
+
+        <div class="spacer"></div>
+
+        <button class="btn btn-secondary mt-md" onclick="followAll()">Follow all</button>
+        <button class="btn btn-secondary mt-md" onclick="inviteMore()">Invite more friends</button>
+        <button class="btn btn-ghost mt-md" onclick="goto('s1-7')">Continue</button>
+      </div>
+
+      <!-- ============ FLOW 1.7 COUNTDOWN ============ -->
+      <div class="screen" id="s1-7">
+        <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+          <div class="center">
+            <span class="eyebrow">you're in</span>
+            <h1 class="serif mt-md" style="font-size: 36px;">Welcome to Life Update<span class="brand-colon">:</span></h1>
+          </div>
+
+          <div class="countdown-tile">
+            <div class="num">12</div>
+            <div class="lbl">days until your first post</div>
+          </div>
+
+          <p class="body center" style="padding: 0 20px;">Your first post drops <strong>June 1</strong>. In the meantime, see what your friends have been up to.</p>
+        </div>
+
+        <button class="btn btn-primary" onclick="goto('s3-1')">See the feed</button>
+        <button class="btn btn-ghost mt-md" onclick="goto('s4-1')">Adjust cadence</button>
+      </div>
+
+      <!-- ============ FLOW 2.1 LOCK SCREEN ============ -->
+      <div class="screen" id="s2-1">
+        <div class="lock-screen">
+          <div class="lock-time">9:00</div>
+          <div class="lock-date">Friday, June 1</div>
+
+          <div class="lock-notif" onclick="goto('s2-3')">
+            <div class="icon">L</div>
+            <div class="body">
+              <div class="app">LIFE UPDATE: <span class="time" style="float:right;">now</span></div>
+              <div class="title">Your May draft is ready.</div>
+              <div class="text">Tap to edit and publish.</div>
+            </div>
+          </div>
+
+          <p class="small center" style="color: rgba(250, 246, 238, 0.5); margin-top: auto;">↑ swipe to unlock</p>
+        </div>
+      </div>
+
+      <!-- ============ FLOW 2.2 COMPOSE INTRO ============ -->
+      <div class="screen" id="s2-2">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s3-1')">← Later</button>
+          <span></span>
+          <span></span>
+        </div>
+
+        <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+          <span class="eyebrow center">May 2026</span>
+          <h1 class="serif center mt-md mb-md" style="font-size: 32px;">Your post is ready.</h1>
+
+          <div class="card mb-md" style="background: var(--accent-soft); border-color: var(--accent-soft);">
+            <p class="body" style="color: var(--ink);">We pulled this together from your last 30 days. Edit what you want, add what's missing, publish when you're ready.</p>
+          </div>
+
+          <p class="small center">Take your time. No deadline.</p>
+        </div>
+
+        <button class="btn btn-primary" onclick="goto('s2-3')">Review draft</button>
+        <button class="btn btn-ghost mt-md" onclick="showToast('Draft saved. We\'ll remind you.'); goto('s3-1')">Save & finish later</button>
+      </div>
+
+      <!-- ============ FLOW 2.3 POST EDITOR ============ -->
+      <div class="screen" id="s2-3">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s3-1')">Cancel</button>
+          <span class="title">May 2026</span>
+          <button class="action" onclick="goto('s2-5')">Next</button>
+        </div>
+
+        <span class="eyebrow" style="display:block; margin-bottom: 2px;">title this issue</span>
+        <input class="post-title-input" id="post-title-input" placeholder="Give this month a title..." value="Seattle-bound" />
+
+        <p class="small mb-md">Tap any section to edit. Hide sections you don't want to share.</p>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">🎵</span>
+            <span class="label-up">Top song</span>
+            <button class="editor-toggle-btn hide" onclick="toggleSection(this)">Hide</button>
+          </div>
+          <div style="font-family: var(--serif); font-size: 18px;">Housebroken</div>
+          <div class="small" style="margin-top: 2px;">Aiyana Lee</div>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">📖</span>
+            <span class="label-up">Finished reading</span>
+            <button class="editor-toggle-btn hide" onclick="toggleSection(this)">Hide</button>
+          </div>
+          <div style="font-family: var(--serif); font-size: 18px;">Leviathan Wakes</div>
+          <div class="small" style="margin-top: 2px;">James S.A. Corey</div>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">💪</span>
+            <span class="label-up">Workouts</span>
+            <button class="editor-toggle-btn hide" onclick="toggleSection(this)">Hide</button>
+          </div>
+          <div style="font-family: var(--serif); font-size: 18px;">14 workouts this month</div>
+          <div class="small" style="margin-top: 2px;">350,000 steps</div>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">📺</span>
+            <span class="label-up">Watched</span>
+            <button class="editor-toggle-btn hide" onclick="toggleSection(this)">Hide</button>
+          </div>
+          <div style="font-family: var(--serif); font-size: 18px;">Gossip Girl, Season 5</div>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">📷</span>
+            <span class="label-up">Photos (3 of 247)</span>
+            <button class="editor-toggle-btn" onclick="goto('s2-4')">Edit</button>
+          </div>
+          <div class="photo-grid">
+            <div class="photo alex-1"></div>
+            <div class="photo alex-3"></div>
+            <div class="photo alex-6"></div>
+          </div>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">🍽️</span>
+            <span class="label-up">Favorite restaurant</span>
+            <button class="editor-toggle-btn hide" onclick="toggleSection(this)">Hide</button>
+          </div>
+          <input class="input mb-xs" placeholder="Restaurant name" value="Ginger Pig" />
+          <input class="input mb-xs" placeholder="City or neighborhood" value="Denver" />
+          <textarea class="input" rows="2" placeholder="Why you loved it (optional)">The tom yum noodles were so good.</textarea>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">🍳</span>
+            <span class="label-up">Favorite recipe</span>
+            <button class="editor-toggle-btn hide" onclick="toggleSection(this)">Hide</button>
+          </div>
+          <input class="input mb-xs" placeholder="Recipe name" value="Pasta caesar salad" />
+          <input class="input mb-xs" placeholder="Source (cookbook, NYT, made up...)" value="NYT Cooking" />
+          <textarea class="input" rows="2" placeholder="Notes (optional)"></textarea>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">✈️</span>
+            <span class="label-up">Trips</span>
+            <button class="editor-toggle-btn hide" onclick="toggleSection(this)">Hide</button>
+          </div>
+          <input class="input mb-xs" placeholder="Where" value="Denver" />
+          <textarea class="input" rows="2" placeholder="Notes (optional)"></textarea>
+          <div id="trip-anchor-main"></div>
+          <button class="btn btn-ghost" style="padding: 8px; font-size: 12px; margin-top: 8px;" onclick="addTrip('main')">+ Add another trip</button>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">💭</span>
+            <span class="label-up">Life update</span>
+          </div>
+          <textarea class="input" rows="3" placeholder="Anything else worth sharing?">Elisa and I decided we're moving to Seattle!</textarea>
+        </div>
+
+        <div id="custom-section-anchor-main"></div>
+
+        <button class="btn btn-ghost mt-md" onclick="addCustomSection('main')">+ Add custom section</button>
+        <button class="btn btn-primary mt-md" onclick="goto('s2-5')">Preview post</button>
+      </div>
+
+      <!-- ============ FLOW 2.3b EMPTY-INTEGRATION EDITOR ============ -->
+      <div class="screen" id="s2-3b">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s2-3')">Cancel</button>
+          <span class="title">May 2026</span>
+          <button class="action" onclick="goto('s2-5')">Next</button>
+        </div>
+
+        <span class="eyebrow" style="display:block; margin-bottom: 2px;">title this issue</span>
+        <input class="post-title-input" placeholder="Give this month a title..." />
+
+        <p class="small mb-md">You haven't connected any integrations yet. You can still post.</p>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">🍽️</span>
+            <span class="label-up">Favorite restaurant</span>
+            <button class="editor-toggle-btn hide" onclick="toggleSection(this)">Hide</button>
+          </div>
+          <input class="input mb-xs" placeholder="Restaurant name" />
+          <input class="input mb-xs" placeholder="City or neighborhood" />
+          <textarea class="input" rows="2" placeholder="Why you loved it (optional)"></textarea>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">🍳</span>
+            <span class="label-up">Favorite recipe</span>
+            <button class="editor-toggle-btn hide" onclick="toggleSection(this)">Hide</button>
+          </div>
+          <input class="input mb-xs" placeholder="Recipe name" />
+          <input class="input mb-xs" placeholder="Source (cookbook, NYT, made up...)" />
+          <textarea class="input" rows="2" placeholder="Notes (optional)"></textarea>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">✈️</span>
+            <span class="label-up">Trips</span>
+          </div>
+          <div id="trip-anchor-empty"></div>
+          <button class="btn btn-secondary" style="padding: 12px;" onclick="addTrip('empty')">+ Add a trip</button>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">📷</span>
+            <span class="label-up">Photos</span>
+          </div>
+          <button class="btn btn-secondary" style="padding: 12px;" onclick="goto('s2-4')">+ Pick up to 5 photos</button>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
+            <span style="font-size: 18px;">💭</span>
+            <span class="label-up">Life update</span>
+          </div>
+          <textarea class="input" rows="4" placeholder="What's been going on?"></textarea>
+        </div>
+
+        <div id="custom-section-anchor-empty"></div>
+
+        <button class="btn btn-ghost mt-md" onclick="addCustomSection('empty')">+ Add custom section</button>
+
+        <div class="card mt-md" style="background: var(--accent-soft); border-color: var(--accent-soft); text-align: center;">
+          <p class="small" style="color: var(--ink); margin-bottom: 12px;">Your post will look more interesting if you connect a few integrations.</p>
+          <button class="btn btn-secondary" onclick="goto('s1-5')">Browse integrations</button>
+        </div>
+      </div>
+
+      <!-- ============ FLOW 2.4 PHOTO PICKER ============ -->
+      <div class="screen" id="s2-4">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s2-3')">← Back</button>
+          <span class="title">Photos</span>
+          <button class="action" onclick="goto('s2-3')">Done</button>
+        </div>
+
+        <p class="body mb-xs">Choose up to 5 photos</p>
+        <p class="small mb-md" style="color: var(--accent); font-weight: 600;">3 selected</p>
+
+        <span class="eyebrow mb-sm" style="display: block;">May 2026</span>
+
+        <div class="picker-grid">
+          <div class="picker-photo selected" style="background: url('assets/photo-1.jpeg') center/cover;" onclick="togglePickerPhoto(this)"><div class="check">1</div></div>
+          <div class="picker-photo" style="background: url('assets/photo-2.jpeg') center/cover;" onclick="togglePickerPhoto(this)"><div class="check"></div></div>
+          <div class="picker-photo selected" style="background: url('assets/photo-3.jpeg') center/cover;" onclick="togglePickerPhoto(this)"><div class="check">2</div></div>
+          <div class="picker-photo" style="background: url('assets/photo-4.jpeg') center/cover;" onclick="togglePickerPhoto(this)"><div class="check"></div></div>
+          <div class="picker-photo" style="background: url('assets/photo-5.jpeg') center/cover;" onclick="togglePickerPhoto(this)"><div class="check"></div></div>
+          <div class="picker-photo selected" style="background: url('assets/photo-6.jpeg') center/cover;" onclick="togglePickerPhoto(this)"><div class="check">3</div></div>
+          <div class="picker-photo" style="background: linear-gradient(135deg, #D4CCB8, #B8AC93);" onclick="togglePickerPhoto(this)"><div class="check"></div></div>
+          <div class="picker-photo" style="background: linear-gradient(135deg, #C9A87C, #8B6B3E);" onclick="togglePickerPhoto(this)"><div class="check"></div></div>
+          <div class="picker-photo" style="background: linear-gradient(135deg, #87A878, #4F6D40);" onclick="togglePickerPhoto(this)"><div class="check"></div></div>
+          <div class="picker-photo" style="background: linear-gradient(135deg, #B8553A, #7C2E1A);" onclick="togglePickerPhoto(this)"><div class="check"></div></div>
+          <div class="picker-photo" style="background: linear-gradient(135deg, #6B7F8C, #3A4F5E);" onclick="togglePickerPhoto(this)"><div class="check"></div></div>
+          <div class="picker-photo" style="background: linear-gradient(135deg, #E8C39E, #B8916A);" onclick="togglePickerPhoto(this)"><div class="check"></div></div>
+        </div>
+
+        <button class="btn btn-secondary mt-md" onclick="autoSuggestPhotos()">Auto-suggest best 5</button>
+      </div>
+
+      <!-- ============ FLOW 2.5 PREVIEW ============ -->
+      <div class="screen" id="s2-5">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s2-3')">← Back</button>
+          <span class="title">Preview</span>
+          <button class="action" onclick="goto('s2-6')">Publish</button>
+        </div>
+
+        <p class="small mb-md">This is what your friends will see.</p>
+
+        <div class="post-card">
+          <div class="post-header">
+            <div class="avatar av-alex">AW</div>
+            <div class="meta">
+              <div class="author">Alex W.</div>
+              <div class="loc">Denver, CO</div>
+            </div>
+            <div class="date">May</div>
+          </div>
+
+          <div class="post-title-display">Seattle-bound</div>
+
+          <div class="post-section">
+            <div class="post-icon music">🎵</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Top song</div>
+              <div class="post-section-value">Housebroken</div>
+              <div class="post-section-sub">Aiyana Lee</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon books">📖</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Finished</div>
+              <div class="post-section-value">Leviathan Wakes</div>
+              <div class="post-section-sub">James S.A. Corey</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon workouts">💪</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Workouts</div>
+              <div class="post-section-value">14 sessions</div>
+              <div class="post-section-sub">350,000 steps</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon watched">📺</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Watched</div>
+              <div class="post-section-value">Gossip Girl, Season 5</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon restaurant">🍽️</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Favorite restaurant</div>
+              <div class="post-section-value">Ginger Pig</div>
+              <div class="post-section-sub">Denver · "the tom yum noodles were so good"</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon recipe">🍳</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Recipe I made</div>
+              <div class="post-section-value">Pasta caesar salad</div>
+              <div class="post-section-sub">NYT Cooking</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon trips">✈️</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Trip</div>
+              <div class="post-section-value">Denver</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <div class="post-section-title" style="margin-bottom: 8px; padding-left: 4px;">Photos</div>
+            <div class="photo-grid">
+              <div class="photo alex-1"></div>
+              <div class="photo alex-3"></div>
+              <div class="photo alex-6"></div>
+            </div>
+          </div>
+
+          <div class="post-text">"Elisa and I decided we're moving to Seattle!"</div>
+        </div>
+
+        <button class="btn btn-accent mt-md" onclick="fireConfetti(); goto('s2-6')">Publish to friends 🎉</button>
+      </div>
+
+      <!-- ============ FLOW 2.6 PUBLISHED ============ -->
+      <div class="screen" id="s2-6">
+        <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+          <div class="check-circle" style="background: var(--yellow); color: var(--ink);">🎉</div>
+          <h1 class="serif center" style="font-size: 36px;">It's out!</h1>
+          <p class="body center mt-md">Your May post is live.<br>Now close the app and go outside.</p>
+
+          <div class="card mt-lg" style="text-align: center; padding: 24px;">
+            <div class="label-up mb-xs">Your next post</div>
+            <div style="font-family: var(--serif); font-size: 26px; color: var(--accent);">drops July 1</div>
+            <div class="small" style="margin-top: 6px;">on the 1st of every month, as promised</div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="publishAndGoToFeed()">See friends' posts</button>
+        <button class="btn btn-ghost mt-md" onclick="showToast('See you on the 1st 👋')">Close app</button>
+      </div>
+
+      <!-- ============ FLOW 3.1 HOME FEED ============ -->
+      <div class="screen with-tabs" id="s3-1">
+        <div class="masthead">
+          <div class="logo">Life Update<span class="brand-colon">:</span></div>
+          <div class="tagline">May 2026 · issue no. 5</div>
+        </div>
+
+        <div class="feed-header">
+          <div class="month">Your circle</div>
+          <div class="feed-actions">
+            <div class="icon-btn" onclick="goto('s3-3')">⌕</div>
+            <div class="icon-btn" onclick="goto('s4-1')">☰</div>
+          </div>
+        </div>
+
+        <div class="post-card" onclick="viewPost('christina')">
+          <div class="post-header">
+            <div class="avatar av-sarah">CS</div>
+            <div class="meta">
+              <div class="author">Christina S.</div>
+              <div class="loc">Denver, CO</div>
+            </div>
+            <div class="date">May 1</div>
+          </div>
+
+          <div class="post-title-display">Settling in <span class="sticker blue">new place</span></div>
+
+          <div class="post-section">
+            <div class="post-icon music">🎵</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Top song</div>
+              <div class="post-section-value">Pink Pony Club</div>
+              <div class="post-section-sub">Chappell Roan</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon books">📖</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Finished</div>
+              <div class="post-section-value">Tomorrow and Tomorrow and Tomorrow</div>
+              <div class="post-section-sub">Gabrielle Zevin <span class="stars">★★★★★</span></div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon workouts">💪</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Workouts</div>
+              <div class="post-section-value">22 sessions</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon restaurant">🍽️</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Favorite restaurant</div>
+              <div class="post-section-value">Safta</div>
+              <div class="post-section-sub">RiNo, Denver · "the labneh is reason enough"</div>
+            </div>
+          </div>
+
+          <div class="photo-grid" style="margin-top: 12px;">
+            <div class="photo p2"></div>
+            <div class="photo p5"></div>
+            <div class="photo p6"></div>
+          </div>
+
+          <div class="post-text">"Moved into the new place. Painting everything green and I have no regrets."</div>
+
+          <div class="post-footer">
+            <span>● 4 comments</span>
+          </div>
+        </div>
+
+        <div class="post-card" onclick="viewPost('carolyn')">
+          <div class="post-header">
+            <div class="avatar av-mike">CC</div>
+            <div class="meta">
+              <div class="author">Carolyn C.</div>
+              <div class="loc">Brooklyn, NY</div>
+            </div>
+            <div class="date">May 1</div>
+          </div>
+
+          <div class="post-title-display">Lisbon, mostly <span class="sticker coral">far away</span></div>
+
+          <div class="post-section">
+            <div class="post-icon music">🎵</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Top song</div>
+              <div class="post-section-value">Not Like Us</div>
+              <div class="post-section-sub">Kendrick Lamar</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon watched">📺</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Watched</div>
+              <div class="post-section-value">Dune Part Two</div>
+              <div class="post-section-sub"><span class="stars">★★★★</span></div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon trips">✈️</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Trip</div>
+              <div class="post-section-value">Lisbon, 5 days</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon restaurant">🍽️</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Favorite restaurant</div>
+              <div class="post-section-value">Time Out Market</div>
+              <div class="post-section-sub">Cais do Sodré · "ate the whole place across 3 visits"</div>
+            </div>
+          </div>
+
+          <div class="photo-grid" style="margin-top: 12px;">
+            <div class="photo p3"></div>
+            <div class="photo p4"></div>
+            <div class="photo p1"></div>
+          </div>
+
+          <div class="post-footer">
+            <span>● 12 comments</span>
+          </div>
+        </div>
+
+        <div class="post-card" onclick="viewPost('jordan')">
+          <div class="post-header">
+            <div class="avatar av-dani">JW</div>
+            <div class="meta">
+              <div class="author">Jordan W.</div>
+              <div class="loc">Denver, CO</div>
+            </div>
+            <div class="date">May 2</div>
+          </div>
+
+          <div class="post-title-display">First 13.1 <span class="sticker">first time! 🏃</span></div>
+
+          <div class="post-section">
+            <div class="post-icon books">📖</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Finished</div>
+              <div class="post-section-value">Project Hail Mary</div>
+              <div class="post-section-sub">Andy Weir <span class="stars">★★★★★</span></div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon workouts">💪</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Workouts</div>
+              <div class="post-section-value">first half-marathon!</div>
+              <div class="post-section-sub">2:14 finish time</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon recipe">🍳</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Recipe I made</div>
+              <div class="post-section-value">Smitten Kitchen carbonara</div>
+              <div class="post-section-sub">Earned every bite</div>
+            </div>
+          </div>
+
+          <div class="post-text">"Crossed the line crying. Worth every blistered toe."</div>
+
+          <div class="post-footer">
+            <span>● 7 comments</span>
+          </div>
+        </div>
+
+        <div class="post-card" onclick="viewPost('elisa')">
+          <div class="post-header">
+            <div class="avatar av-daniel">ES</div>
+            <div class="meta">
+              <div class="author">Elisa S.</div>
+              <div class="loc">Denver, CO</div>
+            </div>
+            <div class="date">May 3</div>
+          </div>
+
+          <div class="post-title-display">Counting down <span class="sticker">60 days</span></div>
+
+          <div class="post-section">
+            <div class="post-icon music">🎵</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Top song</div>
+              <div class="post-section-value">Northern Attitude</div>
+              <div class="post-section-sub">Noah Kahan</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon workouts">💪</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Workouts</div>
+              <div class="post-section-value">11 sessions</div>
+              <div class="post-section-sub">moving boxes counts, right?</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon watched">📺</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Watched</div>
+              <div class="post-section-value">Anatomy of a Fall</div>
+              <div class="post-section-sub"><span class="stars">★★★★★</span></div>
+            </div>
+          </div>
+
+          <div class="post-text">"60 days until Seattle. The boxes are multiplying."</div>
+
+          <div class="post-footer">
+            <span>● 9 comments</span>
+          </div>
+        </div>
+
+        <div class="post-card" onclick="viewPost('daniel')">
+          <div class="post-header">
+            <div class="avatar av-dl">DL</div>
+            <div class="meta">
+              <div class="author">Daniel L.</div>
+              <div class="loc">Austin, TX</div>
+            </div>
+            <div class="date">May 4</div>
+          </div>
+
+          <div class="post-title-display">Newly single</div>
+
+          <div class="post-section">
+            <div class="post-icon music">🎵</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Top song</div>
+              <div class="post-section-value">vampire</div>
+              <div class="post-section-sub">Olivia Rodrigo · 142 plays</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon books">📖</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Finished</div>
+              <div class="post-section-value">Annihilation</div>
+              <div class="post-section-sub">Jeff VanderMeer <span class="stars">★★★★</span></div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon workouts">💪</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Workouts</div>
+              <div class="post-section-value">9 sessions</div>
+              <div class="post-section-sub">rage cardio is real</div>
+            </div>
+          </div>
+
+          <div class="post-section">
+            <div class="post-icon watched">📺</div>
+            <div class="post-section-body">
+              <div class="post-section-title">Watched</div>
+              <div class="post-section-value">Past Lives</div>
+              <div class="post-section-sub"><span class="stars">★★★★★</span> probably shouldn't have</div>
+            </div>
+          </div>
+
+          <div class="post-text">"Got dumped. The good news is I have more time to read now."</div>
+
+          <div class="post-footer">
+            <span>● 23 comments</span>
+          </div>
+        </div>
+
+        <div class="tab-bar">
+          <button class="on"><span class="tb-icon">☐</span><span>Feed</span></button>
+          <button onclick="goto('s3-3')"><span class="tb-icon">⌕</span><span>Discover</span></button>
+          <button onclick="goto('s2-3')"><span class="tb-icon">✎</span><span>Post</span></button>
+          <button onclick="goto('s4-1')"><span class="tb-icon">☰</span><span>You</span></button>
+        </div>
+      </div>
+
+      <!-- ============ FLOW 3.2 POST DETAIL (template, populated by JS) ============ -->
+      <div class="screen" id="s3-2">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s3-1')">← Feed</button>
+          <span></span>
+          <button class="action" onclick="openShareSheet()">Share</button>
+        </div>
+
+        <div class="post-header" style="margin-bottom: 8px;">
+          <div class="avatar lg" id="detail-avatar"></div>
+          <div class="meta">
+            <div class="author" style="font-size: 18px;" id="detail-author"></div>
+            <div class="loc" id="detail-loc"></div>
+          </div>
+        </div>
+
+        <div class="post-title-large" id="detail-title"></div>
+
+        <div id="detail-sections"></div>
+
+        <div id="detail-photos" style="margin-top: 16px;"></div>
+
+        <div class="post-text" id="detail-text"></div>
+
+        <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 20px;">
+          <h2 class="serif mb-sm" style="font-size: 18px;" id="detail-comments-header">Comments</h2>
+          <div id="detail-comments"></div>
+          <div style="display: flex; gap: 8px; margin-top: 16px;">
+            <input class="input" id="comment-input" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')postComment()" />
+            <button class="btn btn-primary" style="width: auto; padding: 12px 18px; flex-shrink: 0;" onclick="postComment()">Post</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ FLOW 3.3 DISCOVERY SEARCH ============ -->
+      <div class="screen with-tabs" id="s3-3">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s3-1')">← Feed</button>
+          <span class="title">Discover</span>
+          <span></span>
+        </div>
+
+        <h1 class="serif mb-sm">Ask your network.</h1>
+        <p class="body mb-md">Recommendations from people who actually have taste.</p>
+
+        <input class="input mb-md" id="discovery-search" placeholder="What did friends like?" oninput="filterDiscoveryPrompts(this.value)" onkeydown="if(event.key==='Enter')runDiscoverySearch(this.value)" />
+
+        <span class="label-up mb-xs" style="display:block;">Filter by</span>
+        <div class="filter-chips" id="discovery-chips">
+          <span class="chip on" data-filter="all" onclick="toggleChip(this)">All</span>
+          <span class="chip" data-filter="songs" onclick="toggleChip(this)">🎵 Songs</span>
+          <span class="chip" data-filter="books" onclick="toggleChip(this)">📖 Books</span>
+          <span class="chip" data-filter="movies" onclick="toggleChip(this)">📺 Movies & TV</span>
+          <span class="chip" data-filter="restaurants" onclick="toggleChip(this)">🍽️ Restaurants</span>
+        </div>
+
+        <span class="label-up mb-xs" style="display:block;">Time</span>
+        <div class="seg" id="discovery-time-seg">
+          <button class="on" data-time="month" onclick="toggleSegBtn(this)">This month</button>
+          <button data-time="year" onclick="toggleSegBtn(this)">This year</button>
+          <button data-time="all" onclick="toggleSegBtn(this)">All time</button>
+        </div>
+
+        <div class="quick-prompts" id="discovery-prompts">
+          <span class="label-up mb-xs" style="display:block;">Quick prompts</span>
+
+          <div class="prompt-item" onclick="showDiscoveryResults('best-books')">
+            <span style="font-size: 18px;">📖</span>
+            <span>Best books this year</span>
+          </div>
+          <div class="prompt-item" onclick="showDiscoveryResults('songs-may')">
+            <span style="font-size: 18px;">🎵</span>
+            <span>Songs on repeat in May</span>
+          </div>
+          <div class="prompt-item" onclick="showDiscoveryResults('movies')">
+            <span style="font-size: 18px;">📺</span>
+            <span>Movies friends loved</span>
+          </div>
+          <div class="prompt-item" onclick="showDiscoveryResults('restaurants')">
+            <span style="font-size: 18px;">🍽️</span>
+            <span>Best restaurants this year</span>
+          </div>
+          <div class="prompt-item" onclick="showDiscoveryResults('trips')">
+            <span style="font-size: 18px;">✈️</span>
+            <span>Trip ideas from the crew</span>
+          </div>
+        </div>
+
+        <div class="tab-bar">
+          <button onclick="goto('s3-1')"><span class="tb-icon">☐</span><span>Feed</span></button>
+          <button class="on"><span class="tb-icon">⌕</span><span>Discover</span></button>
+          <button onclick="goto('s2-3')"><span class="tb-icon">✎</span><span>Post</span></button>
+          <button onclick="goto('s4-1')"><span class="tb-icon">☰</span><span>You</span></button>
+        </div>
+      </div>
+
+      <!-- ============ FLOW 3.4 DISCOVERY RESULTS (template, populated by JS) ============ -->
+      <div class="screen" id="s3-4">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s3-3')">← Back</button>
+          <span class="title">Results</span>
+          <span></span>
+        </div>
+
+        <span class="eyebrow">prompt</span>
+        <h1 class="serif mb-sm" style="font-size: 26px;" id="discovery-results-title">Results</h1>
+        <p class="small mb-md" id="discovery-results-subtitle"></p>
+
+        <div id="discovery-results-list"></div>
+      </div>
+
+      <!-- ============ SETTINGS ============ -->
+      <div class="screen" id="s4-1">
+        <div class="top-bar">
+          <button class="back" onclick="goto('s3-1')">← Feed</button>
+          <span class="title">Settings</span>
+          <span></span>
+        </div>
+
+        <div class="post-header" style="margin-bottom: 20px;">
+          <div class="avatar av-alex lg">AW</div>
+          <div class="meta">
+            <div class="author" style="font-size: 18px;">Alex W.</div>
+            <div class="loc">@alexw · Denver</div>
+          </div>
+        </div>
+
+        <span class="label-up mb-xs" style="display:block;">Posting cadence</span>
+        <div class="card mb-md">
+          <p class="small mb-sm">How often do you want to post?</p>
+          <div class="seg" id="cadence-seg">
+            <button data-cadence="weekly" onclick="setCadence('weekly')">Weekly</button>
+            <button class="on" data-cadence="monthly" onclick="setCadence('monthly')">Monthly</button>
+            <button data-cadence="quarterly" onclick="setCadence('quarterly')">Quarterly</button>
+          </div>
+          <p class="small" style="margin-top: 12px;">Your next post drops <strong id="settings-next-date">July 1</strong>. We'll send one push notification. No follow-ups unless you turn them on.</p>
+        </div>
+
+        <span class="label-up mb-xs" style="display:block;">Notifications</span>
+        <div class="settings-group">
+          <div class="settings-row">
+            <span class="label">Post reminder</span>
+            <div class="toggle on" onclick="toggleSwitch(this)"></div>
+          </div>
+          <div class="settings-row">
+            <span class="label">Comments & engagement</span>
+            <div class="toggle on" onclick="toggleSwitch(this)"></div>
+          </div>
+          <div class="settings-row">
+            <span class="label">Friend joined</span>
+            <div class="toggle on" onclick="toggleSwitch(this)"></div>
+          </div>
+        </div>
+
+        <span class="label-up mb-xs" style="display:block;">Integrations</span>
+        <div class="settings-group" id="settings-integrations">
+          <div class="settings-row">
+            <span class="label">Spotify</span>
+            <button class="integration-btn connected" data-int="spotify" onclick="toggleSettingsIntegration('spotify')">Connected ✓</button>
+          </div>
+          <div class="settings-row">
+            <span class="label">Hardcover</span>
+            <button class="integration-btn connected" data-int="hardcover" onclick="toggleSettingsIntegration('hardcover')">Connected ✓</button>
+          </div>
+          <div class="settings-row">
+            <span class="label">Strava</span>
+            <button class="integration-btn connected" data-int="strava" onclick="toggleSettingsIntegration('strava')">Connected ✓</button>
+          </div>
+          <div class="settings-row">
+            <span class="label">Apple Health</span>
+            <button class="integration-btn connected" data-int="health" onclick="toggleSettingsIntegration('health')">Connected ✓</button>
+          </div>
+          <div class="settings-row">
+            <span class="label">Apple Photos</span>
+            <button class="integration-btn connected" data-int="photos" onclick="toggleSettingsIntegration('photos')">Connected ✓</button>
+          </div>
+          <div class="settings-row">
+            <span class="label">Trakt</span>
+            <button class="integration-btn connected" data-int="trakt" onclick="toggleSettingsIntegration('trakt')">Connected ✓</button>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary mt-md" onclick="goto('s2-3b')">Preview: zero-integration post</button>
+
+        <button class="btn btn-ghost mt-md" style="color: var(--accent);" onclick="signOut()">Sign out</button>
+      </div>
+
+      <!-- ============ PRD ============ -->
+      <div class="screen prd-screen" id="prd">
+        <div class="top-bar">
+          <button class="back" onclick="exitPRD()">← Back to app</button>
+          <span class="title">PRD</span>
+          <span></span>
+        </div>
+
+        <div class="masthead">
+          <div class="eyebrow">letter from the editors</div>
+          <div class="logo" style="font-size: 32px; margin-top: 6px;">Life Update<span class="brand-colon">:</span></div>
+          <div class="tagline">PRD v0.2 · concept exploration · May 2026</div>
+        </div>
+
+        <div class="prd-meta">
+          <p><strong>Written by:</strong> Alex and Elisa, possibly on a couch</p>
+          <p><strong>Status:</strong> Pre-build. Still has a placeholder name.</p>
+          <p><strong>Audience:</strong> Us, next week's us, and whoever joins as co-founder #3</p>
+        </div>
+
+        <h2 class="serif prd-section-title">What we're making</h2>
+        <p class="prd-body">People hate social media. People love their friends. There's a gap between those two facts and we're trying to live in it.</p>
+        <p class="prd-body">You post once on a schedule you pick. We grab your top song, the book you finished, your workouts, your photos, the show you watched, plus whatever you write in for restaurants, recipes, trips, and life updates. Your friends read it. They comment. You close the app. Everyone goes outside.</p>
+
+        <h2 class="serif prd-section-title">Who it's for</h2>
+        <p class="prd-body">People in their late 20s to early 40s who deleted Instagram and then quietly missed knowing what their friends were up to. Starting with the Denver crew because they're nearby and they'll tell us when something's broken.</p>
+
+        <h2 class="serif prd-section-title">What we've already agreed on</h2>
+        <ul class="prd-list">
+          <li>iOS-only for v1. Apple is doing too much heavy lifting to also build for Android.</li>
+          <li>Invite-only. Friends invite friends. No public sign-ups.</li>
+          <li>Apple Sign In as the front door. Nobody wants another password.</li>
+          <li>You pick the cadence: weekly, monthly, or quarterly.</li>
+          <li>We will not auto-publish for you. Ever. Even if you ghost us.</li>
+          <li>Comment notifications are real-time (with sensible limits, see decision 03).</li>
+          <li>Discovery uses structured filters. The LLM can wait its turn.</li>
+          <li>The editor works even if you connect zero integrations. Type into a box like it's 2005.</li>
+          <li>Post titles, custom sections, restaurant and recipe presets all in v1.</li>
+          <li>No ads. We mean it.</li>
+          <li>Three people at peak. $300k/mo target. Lifestyle business with delusions of grandeur.</li>
+          <li>The name is <strong>Life Update:</strong> (yes, the colon is part of it).</li>
+        </ul>
+
+        <h2 class="serif prd-section-title">What we still have to figure out</h2>
+        <p class="prd-body">Ten things we have opinions about but haven't committed to. The recommendation is what we'd pick if we had to lock it tomorrow.</p>
+
+        <div class="decision-block">
+          <div class="decision-num">01</div>
+          <div class="decision-title">Push notification timing</div>
+          <div class="decision-desc">When does the "your draft is ready" push fire? Default is the 1st of the month at 9am local. We could also let people pick a time.</div>
+          <div class="decision-options"><strong>Options:</strong> Fixed 9am local. Fixed but user-configurable hour. Smart-time based on when they usually open the app. Friday night because that's when people actually have time.</div>
+          <div class="decision-rec"><strong>Our take:</strong> Fixed 9am local for v1. Add a "send me my draft on..." picker in v2 if anyone complains. Don't overengineer the first push.</div>
+        </div>
+
+        <div class="decision-block">
+          <div class="decision-num">02</div>
+          <div class="decision-title">To like or not to like</div>
+          <div class="decision-desc">We started at "no likes ever." We flexed. We came back. This decision will get reopened at 2am in year two by whoever's looking at the engagement chart.</div>
+          <div class="decision-options"><strong>Options:</strong> Nothing. Hearts on posts. Hearts on comments only. A "saw this" eyeball that isn't a like but really is.</div>
+          <div class="decision-rec"><strong>Our take:</strong> Stay at zero. The whole point is that you close the app. Likes are the doorway back to opening it fourteen times a day.</div>
+        </div>
+
+        <div class="decision-block">
+          <div class="decision-num">03</div>
+          <div class="decision-title">How loud the comment bell rings</div>
+          <div class="decision-desc">Real-time is good. Real-time times forty-seven on a popular post is a hostage situation.</div>
+          <div class="decision-options"><strong>Options:</strong> Every comment pushes. First three then quiet. Twice-daily digest. User-controlled per post.</div>
+          <div class="decision-rec"><strong>Our take:</strong> First three comments push. Everything else lands in a small badge. You hear from people. You don't get hunted.</div>
+        </div>
+
+        <div class="decision-block">
+          <div class="decision-num">04</div>
+          <div class="decision-title">How many photos</div>
+          <div class="decision-desc">We picked five because Instagram picked ten and we wanted to feel smaller. That's not really a reason.</div>
+          <div class="decision-options"><strong>Options:</strong> Three (museum). Five (current, magazine spread). Ten (yearbook).</div>
+          <div class="decision-rec"><strong>Our take:</strong> Stay at five. Five forces you to curate. If you can't pick five, you had a quiet month and that's also fine.</div>
+        </div>
+
+        <div class="decision-block">
+          <div class="decision-num">05</div>
+          <div class="decision-title">One feed or many circles</div>
+          <div class="decision-desc">Right now everyone you follow sees everything. This is the "Sarah-from-college and Sarah-from-the-wedding-party" problem waiting to happen.</div>
+          <div class="decision-options"><strong>Options:</strong> One feed in v1, circles in v2. Circles in v1. Per-section visibility (workouts to gym crew, life updates to inner ring).</div>
+          <div class="decision-rec"><strong>Our take:</strong> One feed for v1. Solves the cold start. We'll know in six months if anyone actually asks for circles.</div>
+        </div>
+
+        <div class="decision-block">
+          <div class="decision-num">06</div>
+          <div class="decision-title">Can you edit or delete after publishing</div>
+          <div class="decision-desc">You will publish a typo. You will publish a recommendation that turns out to be food poisoning. You will publish a sentence that sounded better in your head.</div>
+          <div class="decision-options"><strong>Options:</strong> Locked forever (the Twitter philosophy). Editable for 24h. Always editable. Delete-only.</div>
+          <div class="decision-rec"><strong>Our take:</strong> Edit window of 24h, delete anytime. Let people fix typos. Don't let them rewrite history.</div>
+        </div>
+
+        <div class="decision-block">
+          <div class="decision-num">07</div>
+          <div class="decision-title">When we ask people for money</div>
+          <div class="decision-desc">Free forever is a charity. Paywall on day one is a vibe killer. The friend graph is the moat. We need it dense before we ask for the credit card.</div>
+          <div class="decision-options"><strong>Options:</strong> Free for v1 then freemium. Freemium from day one with a 3-integration cap. Founding member tier ($30/year for the first 1,000). Pay-what-you-want.</div>
+          <div class="decision-rec"><strong>Our take:</strong> Free for v1. Open a founding member tier at 1,000 daily actives. Real paid tier at 10K MAU.</div>
+        </div>
+
+        <div class="decision-block">
+          <div class="decision-num">08</div>
+          <div class="decision-title">The Android question</div>
+          <div class="decision-desc">Apple Photos and Apple Health are carrying water in this design. Cross-platform makes that hard, and a different team, and a different conversation entirely.</div>
+          <div class="decision-options"><strong>Options:</strong> iOS forever. Android after PMF. Android within six months. Launch both.</div>
+          <div class="decision-rec"><strong>Our take:</strong> iOS-only until we cross $1M ARR. Then we have a conversation. Then probably still no.</div>
+        </div>
+
+        <div class="decision-block">
+          <div class="decision-num">09</div>
+          <div class="decision-title">Where new people come from after Denver</div>
+          <div class="decision-desc">Invite-only is great. Invite-only forever means you have a friend group, not a business.</div>
+          <div class="decision-options"><strong>Options:</strong> Pure invite chains for 12 months. Paid acquisition after we know what works. Press push at 5K users. Partner with a digital wellness brand.</div>
+          <div class="decision-rec"><strong>Our take:</strong> Pure invite chains for the first year. If word of mouth can't get us to 50K, we don't have a product, we have a hobby. Useful either way.</div>
+        </div>
+
+        <div class="decision-block">
+          <div class="decision-num">10</div>
+          <div class="decision-title">What happens to your draft if you ghost the deadline</div>
+          <div class="decision-desc">We agreed no auto-publish. So what does the draft do? Sit there? Forever? Until the next month overwrites it?</div>
+          <div class="decision-options"><strong>Options:</strong> Draft sits indefinitely. Draft archives privately after 30 days. Draft expires and disappears. Draft becomes a journal entry only you can see.</div>
+          <div class="decision-rec"><strong>Our take:</strong> Draft persists. Next month's data refreshes the auto-pulled sections but keeps anything you wrote in. No data loss. Move on with your life.</div>
+        </div>
+
+        <h2 class="serif prd-section-title">Things that could kill us</h2>
+
+        <div class="risk-item">
+          <div class="risk-title">The graveyard</div>
+          <div class="risk-body">Path, BeReal, Poparazzi, Dispo. The anti-addiction social cemetery is large. Most died from being too thin or too punishing. We have to be useful before we're vibey.</div>
+        </div>
+
+        <div class="risk-item">
+          <div class="risk-title">The 29 empty days</div>
+          <div class="risk-body">If everyone posts on the 1st, days 2 through 30 are a ghost town. We're betting Discovery and comments fill the gap. If they don't, the app feels dead.</div>
+        </div>
+
+        <div class="risk-item">
+          <div class="risk-title">APIs are landlords</div>
+          <div class="risk-body">Goodreads is gone. Beli has no door. Google Photos broke in March 2025. Letterboxd will reject us politely. Spotify, Strava, and Hardcover are stable today and could change tomorrow. We should own as few of these as we can.</div>
+        </div>
+
+        <div class="risk-item">
+          <div class="risk-title">Real-time notifications are a trojan horse</div>
+          <div class="risk-body">We added them because they make the product feel alive. They also undermine the pitch. If DAU climbs past "once a month," we built a different product than we set out to build. Watch this number.</div>
+        </div>
+
+        <div class="risk-item">
+          <div class="risk-title">Friend graph density is everything</div>
+          <div class="risk-body">Three friends on the app means a sad feed. Thirty friends means the best thing on your phone. The product is a function of who else is already there.</div>
+        </div>
+
+        <h2 class="serif prd-section-title">How we'll know it's working</h2>
+
+        <div class="card">
+          <div class="metric-row">
+            <span class="name">Did people actually post?</span>
+            <span class="target">70%+</span>
+          </div>
+          <div class="metric-row">
+            <span class="name">Was anyone there to read it?</span>
+            <span class="target">8+ posts/mo</span>
+          </div>
+          <div class="metric-row">
+            <span class="name">Did they come back next month?</span>
+            <span class="target">60% retention</span>
+          </div>
+          <div class="metric-row">
+            <span class="name">Did Discovery do anything?</span>
+            <span class="target">4+ searches/mo</span>
+          </div>
+          <div class="metric-row">
+            <span class="name">Will they pay us?</span>
+            <span class="target">5% conversion</span>
+          </div>
+        </div>
+
+        <h2 class="serif prd-section-title">What we're not building yet</h2>
+        <ul class="prd-list">
+          <li>Android (it's an iPhone app, and we said so).</li>
+          <li>A web app (use your phone like a normal person).</li>
+          <li>DMs. iMessage exists. Use it.</li>
+          <li>Stories. We are not doing stories.</li>
+          <li>Ads. No, also no.</li>
+          <li>Public discoverable accounts. This is for your friends.</li>
+          <li>Verified badges. We believe you're real.</li>
+          <li>Brand accounts. Brands have enough places to be.</li>
+          <li>An algorithmic feed. Chronological is the feature.</li>
+        </ul>
+
+        <h2 class="serif prd-section-title">What we do next</h2>
+        <ul class="prd-list">
+          <li>Show this prototype to the Denver crew. Watch their faces while they click.</li>
+          <li>Buy lifeupdate.app and lock @lifeupdate on every platform before someone else clocks it.</li>
+          <li>Email Letterboxd. They'll say no. Trakt is fine.</li>
+          <li>Apple Developer account. Three minutes and ninety-nine dollars.</li>
+          <li>Spec the OAuth flows for the five integrations that actually work.</li>
+          <li>Engineering scope: how long to build the editor and the feed? That number tells us whether this is a six-month thing or an eighteen-month thing.</li>
+        </ul>
+
+        <p class="prd-body" style="margin-top: 32px; text-align: center; font-family: var(--serif); font-style: italic; color: var(--ink-muted);">end of letter · turn the page when ready</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== SCREEN NAVIGATION ==========
+  const allScreens = [
+    's1-1','s1-2','s1-3','s1-4','s1-5','s1-6','s1-7',
+    's2-1','s2-2','s2-3','s2-3b','s2-4','s2-5','s2-6',
+    's3-1','s3-2','s3-3','s3-4',
+    's4-1'
+  ];
+  let currentScreen = 's1-1';
+
+  function goto(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add('active');
+      currentScreen = id;
+      document.getElementById('screen-jump').value = id;
+      updateFlowTag(id);
+      el.parentElement.scrollTop = 0;
+    }
+  }
+
+  function jumpScreen(id) { goto(id); }
+
+  function nextScreen() {
+    const i = allScreens.indexOf(currentScreen);
+    if (i < allScreens.length - 1) goto(allScreens[i + 1]);
+  }
+
+  function prevScreen() {
+    const i = allScreens.indexOf(currentScreen);
+    if (i > 0) goto(allScreens[i - 1]);
+  }
+
+  function updateFlowTag(id) {
+    const tag = document.getElementById('flow-tag');
+    if (id.startsWith('s1')) tag.textContent = 'Flow 1 — Signup';
+    else if (id.startsWith('s2')) tag.textContent = 'Flow 2 — Posting';
+    else if (id.startsWith('s3')) tag.textContent = 'Flow 3 — Scrolling';
+    else if (id.startsWith('s4')) tag.textContent = 'Settings';
+    else if (id === 'prd') tag.textContent = 'PRD — open decisions';
+  }
+
+  // ========== INTERACTIONS ==========
+  function toggleIntegration(name) {
+    const btn = document.getElementById('int-' + name);
+    const status = document.getElementById('int-' + name + '-status');
+    if (btn.classList.contains('connected')) {
+      btn.classList.remove('connected');
+      btn.textContent = 'Connect';
+      status.style.display = 'none';
+    } else {
+      btn.classList.add('connected');
+      btn.textContent = 'Connected ✓';
+      status.style.display = 'block';
+    }
+  }
+
+  function toggleFollow(btn) {
+    if (btn.classList.contains('followed')) {
+      btn.classList.remove('followed');
+      btn.textContent = 'Follow';
+    } else {
+      btn.classList.add('followed');
+      btn.textContent = 'Following ✓';
+    }
+  }
+
+  function toggleSection(btn) {
+    const section = btn.closest('.editor-section');
+    if (section.classList.contains('hidden')) {
+      section.classList.remove('hidden');
+      btn.textContent = 'Hide';
+      btn.classList.add('hide');
+    } else {
+      section.classList.add('hidden');
+      btn.textContent = 'Show';
+      btn.classList.remove('hide');
+    }
+  }
+
+  function togglePickerPhoto(el) {
+    const grid = el.parentElement;
+    const selected = grid.querySelectorAll('.picker-photo.selected');
+    if (el.classList.contains('selected')) {
+      el.classList.remove('selected');
+      el.querySelector('.check').textContent = '';
+      // Renumber
+      const remaining = grid.querySelectorAll('.picker-photo.selected');
+      remaining.forEach((p, i) => p.querySelector('.check').textContent = i + 1);
+    } else {
+      if (selected.length >= 5) return;
+      el.classList.add('selected');
+      el.querySelector('.check').textContent = selected.length + 1;
+    }
+  }
+
+  function toggleSwitch(el) {
+    el.classList.toggle('on');
+  }
+
+  // ========== NOTIFICATION ==========
+  function showNotif() {
+    const n = document.getElementById('notif');
+    n.classList.add('show');
+    setTimeout(() => n.classList.remove('show'), 4500);
+  }
+
+  function publishAndGoToFeed() {
+    goto('s3-1');
+    setTimeout(showNotif, 1800);
+  }
+
+  // ========== CONFETTI ==========
+  function fireConfetti() {
+    const colors = ['#C04F2D', '#E8B33C', '#6B8AC4', '#6B7F3D', '#E89A8F', '#8E5B82'];
+    const container = document.createElement('div');
+    container.className = 'confetti-container';
+    document.body.appendChild(container);
+    for (let i = 0; i < 60; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      const size = 6 + Math.random() * 8;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const left = Math.random() * 100;
+      const delay = Math.random() * 0.4;
+      const duration = 2.2 + Math.random() * 1.8;
+      const startRot = Math.random() * 360;
+      piece.style.left = left + '%';
+      piece.style.width = size + 'px';
+      piece.style.height = size + 'px';
+      piece.style.background = color;
+      piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      piece.style.transform = 'rotate(' + startRot + 'deg)';
+      piece.style.animation = 'confetti-fall ' + duration + 's ' + delay + 's ease-in forwards';
+      container.appendChild(piece);
+    }
+    setTimeout(() => container.remove(), 4500);
+  }
+
+  // ========== APP STATE ==========
+  const appState = {
+    cadence: 'monthly',
+    currentPostId: null,
+    integrations: {
+      spotify: true, hardcover: true, strava: true,
+      health: true, photos: true, trakt: true
+    }
+  };
+
+  // ========== POSTS DATA ==========
+  const POSTS = {
+    christina: {
+      author: 'Christina S.', fullName: 'Christina Savinar',
+      avatar: 'av-sarah', initials: 'CS',
+      location: 'Denver, CO', date: 'May 1',
+      title: 'Settling in',
+      sticker: '<span class="sticker blue">new place</span>',
+      sections: [
+        { icon: '🎵', cls: 'music', title: 'Top song', value: 'Pink Pony Club', sub: 'Chappell Roan · 87 plays' },
+        { icon: '📖', cls: 'books', title: 'Finished', value: 'Tomorrow and Tomorrow and Tomorrow', sub: 'Gabrielle Zevin <span class="stars">★★★★★</span>' },
+        { icon: '💪', cls: 'workouts', title: 'Workouts', value: '22 sessions', sub: '47 mi run · 3 yoga · 2 hikes' },
+        { icon: '🍽️', cls: 'restaurant', title: 'Favorite restaurant', value: 'Safta', sub: 'RiNo, Denver · "the labneh is reason enough"' }
+      ],
+      photos: ['p2', 'p5', 'p6'],
+      text: 'Moved into the new place. Painting everything green and I have no regrets.',
+      comments: [
+        { author: 'Carolyn C.', avatar: 'av-mike', initials: 'CC', time: '2 days ago', text: 'the green walls slap' },
+        { author: 'Alex W.', avatar: 'av-alex', initials: 'AW', time: '1 day ago', text: 'send pics of the kitchen' },
+        { author: 'Jordan W.', avatar: 'av-dani', initials: 'JW', time: '12h ago', text: 'housewarming when' },
+        { author: 'Zachary G.', avatar: 'av-jess', initials: 'ZG', time: '4h ago', text: 'that book changed my year. so glad you finally read it' }
+      ]
+    },
+    carolyn: {
+      author: 'Carolyn C.', fullName: 'Carolyn Chupa',
+      avatar: 'av-mike', initials: 'CC',
+      location: 'Brooklyn, NY', date: 'May 1',
+      title: 'Lisbon, mostly',
+      sticker: '<span class="sticker coral">far away</span>',
+      sections: [
+        { icon: '🎵', cls: 'music', title: 'Top song', value: 'Not Like Us', sub: 'Kendrick Lamar' },
+        { icon: '📺', cls: 'watched', title: 'Watched', value: 'Dune Part Two', sub: '<span class="stars">★★★★</span>' },
+        { icon: '✈️', cls: 'trips', title: 'Trip', value: 'Lisbon, 5 days', sub: 'first time in Portugal' },
+        { icon: '🍽️', cls: 'restaurant', title: 'Favorite restaurant', value: 'Time Out Market', sub: 'Cais do Sodré · "ate the whole place across 3 visits"' }
+      ],
+      photos: ['p3', 'p4', 'p1'],
+      text: 'Five days, three pastel de natas a day, zero regrets. Plotting the next one already.',
+      comments: [
+        { author: 'Christina S.', avatar: 'av-sarah', initials: 'CS', time: '3 days ago', text: 'WAIT the pastel de nata math is insane' },
+        { author: 'Jordan W.', avatar: 'av-dani', initials: 'JW', time: '2 days ago', text: 'add me to the next trip' },
+        { author: 'Alex W.', avatar: 'av-alex', initials: 'AW', time: '1 day ago', text: 'how was the Time Out Market actually' }
+      ]
+    },
+    jordan: {
+      author: 'Jordan W.', fullName: 'Jordan Watkins',
+      avatar: 'av-dani', initials: 'JW',
+      location: 'Denver, CO', date: 'May 2',
+      title: 'First 13.1',
+      sticker: '<span class="sticker">first time! 🏃</span>',
+      sections: [
+        { icon: '📖', cls: 'books', title: 'Finished', value: 'Project Hail Mary', sub: 'Andy Weir <span class="stars">★★★★★</span>' },
+        { icon: '💪', cls: 'workouts', title: 'Workouts', value: 'first half-marathon!', sub: '2:14 finish time' },
+        { icon: '🍳', cls: 'recipe', title: 'Recipe I made', value: 'Smitten Kitchen carbonara', sub: 'Earned every bite' }
+      ],
+      photos: ['p1', 'p4', 'p2'],
+      text: 'Crossed the line crying. Worth every blistered toe.',
+      comments: [
+        { author: 'Christina S.', avatar: 'av-sarah', initials: 'CS', time: '2 days ago', text: 'CONGRATS!! 13.1 baby!!' },
+        { author: 'Carolyn C.', avatar: 'av-mike', initials: 'CC', time: '2 days ago', text: 'and then carbonara. perfect day.' },
+        { author: 'Alex W.', avatar: 'av-alex', initials: 'AW', time: '1 day ago', text: 'this is why I run with you' }
+      ]
+    },
+    elisa: {
+      author: 'Elisa S.', fullName: 'Elisa Sanborn',
+      avatar: 'av-daniel', initials: 'ES',
+      location: 'Denver, CO', date: 'May 3',
+      title: 'Counting down',
+      sticker: '<span class="sticker">60 days</span>',
+      sections: [
+        { icon: '🎵', cls: 'music', title: 'Top song', value: 'Northern Attitude', sub: 'Noah Kahan' },
+        { icon: '💪', cls: 'workouts', title: 'Workouts', value: '11 sessions', sub: 'moving boxes counts, right?' },
+        { icon: '📺', cls: 'watched', title: 'Watched', value: 'Anatomy of a Fall', sub: '<span class="stars">★★★★★</span>' }
+      ],
+      photos: [],
+      text: '60 days until Seattle. The boxes are multiplying.',
+      comments: [
+        { author: 'Christina S.', avatar: 'av-sarah', initials: 'CS', time: '2 days ago', text: 'nooo who am I supposed to grab coffee with' },
+        { author: 'Alex W.', avatar: 'av-alex', initials: 'AW', time: '2 days ago', text: 'send help. so many boxes.' },
+        { author: 'Jordan W.', avatar: 'av-dani', initials: 'JW', time: '1 day ago', text: 'farewell tour incoming?' }
+      ]
+    },
+    daniel: {
+      author: 'Daniel L.', fullName: 'Daniel Luke',
+      avatar: 'av-dl', initials: 'DL',
+      location: 'Austin, TX', date: 'May 4',
+      title: 'Newly single',
+      sticker: '',
+      sections: [
+        { icon: '🎵', cls: 'music', title: 'Top song', value: 'vampire', sub: 'Olivia Rodrigo · 142 plays' },
+        { icon: '📖', cls: 'books', title: 'Finished', value: 'Annihilation', sub: 'Jeff VanderMeer <span class="stars">★★★★</span>' },
+        { icon: '💪', cls: 'workouts', title: 'Workouts', value: '9 sessions', sub: 'rage cardio is real' },
+        { icon: '📺', cls: 'watched', title: 'Watched', value: 'Past Lives', sub: '<span class="stars">★★★★★</span> probably shouldn\'t have' }
+      ],
+      photos: [],
+      text: 'Got dumped. The good news is I have more time to read now.',
+      comments: [
+        { author: 'Christina S.', avatar: 'av-sarah', initials: 'CS', time: '3 days ago', text: 'sending you a meal kit subscription. no questions.' },
+        { author: 'Carolyn C.', avatar: 'av-mike', initials: 'CC', time: '2 days ago', text: 'Past Lives was a CHOICE Daniel' },
+        { author: 'Alex W.', avatar: 'av-alex', initials: 'AW', time: '1 day ago', text: 'come visit Denver this weekend' },
+        { author: 'Jordan W.', avatar: 'av-dani', initials: 'JW', time: '14h ago', text: 'reading list?' }
+      ]
+    }
+  };
+
+  // ========== POST DETAIL ==========
+  function viewPost(postId) {
+    renderPostDetail(postId);
+    goto('s3-2');
+  }
+
+  function renderPostDetail(postId) {
+    const post = POSTS[postId];
+    if (!post) return;
+    appState.currentPostId = postId;
+
+    const avatar = document.getElementById('detail-avatar');
+    avatar.className = 'avatar lg ' + post.avatar;
+    avatar.textContent = post.initials;
+
+    document.getElementById('detail-author').textContent = post.fullName;
+    document.getElementById('detail-loc').textContent = post.location + ' · ' + post.date;
+
+    const titleEl = document.getElementById('detail-title');
+    if (post.title) {
+      titleEl.style.display = 'block';
+      titleEl.innerHTML = post.title + ' ' + (post.sticker || '');
+    } else {
+      titleEl.style.display = 'none';
+    }
+
+    const sectionsEl = document.getElementById('detail-sections');
+    sectionsEl.innerHTML = post.sections.map(s => `
+      <div class="post-section">
+        <div class="post-icon ${s.cls}">${s.icon}</div>
+        <div class="post-section-body">
+          <div class="post-section-title">${s.title}</div>
+          <div class="post-section-value">${s.value}</div>
+          ${s.sub ? `<div class="post-section-sub">${s.sub}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    const photosEl = document.getElementById('detail-photos');
+    if (post.photos && post.photos.length) {
+      photosEl.style.display = 'block';
+      photosEl.innerHTML = '<div class="post-section-title" style="margin-bottom: 8px; padding-left: 4px;">Photos</div>' +
+        post.photos.map(p => `<div class="photo large ${p}"></div>`).join('');
+    } else {
+      photosEl.style.display = 'none';
+      photosEl.innerHTML = '';
+    }
+
+    const textEl = document.getElementById('detail-text');
+    if (post.text) {
+      textEl.style.display = 'block';
+      textEl.textContent = '"' + post.text + '"';
+    } else {
+      textEl.style.display = 'none';
+    }
+
+    renderComments(post);
+  }
+
+  function renderComments(post) {
+    document.getElementById('detail-comments-header').textContent = 'Comments (' + post.comments.length + ')';
+    document.getElementById('detail-comments').innerHTML = post.comments.map(c => `
+      <div class="comment">
+        <div class="comment-header">
+          <div class="avatar ${c.avatar}" style="width: 28px; height: 28px; font-size: 11px;">${c.initials}</div>
+          <span class="comment-author">${c.author}</span>
+          <span class="comment-time">${c.time}</span>
+        </div>
+        <div class="comment-text">${escapeHTML(c.text)}</div>
+      </div>
+    `).join('') || '<p class="small" style="padding: 12px 0;">No comments yet. Be the first.</p>';
+  }
+
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function postComment() {
+    const input = document.getElementById('comment-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const post = POSTS[appState.currentPostId];
+    if (!post) return;
+    post.comments.push({
+      author: 'Alex W.', avatar: 'av-alex', initials: 'AW',
+      time: 'just now', text: text
+    });
+    input.value = '';
+    renderComments(post);
+    showToast('Comment posted');
+  }
+
+  // ========== DISCOVERY ==========
+  const DISCOVERY_PROMPTS = {
+    'best-books': {
+      title: 'Best books this year',
+      subtitle: 'Ranked by 5-star ratings from your friends.',
+      link: 'See in Hardcover',
+      results: [
+        { name: 'Tomorrow and Tomorrow and Tomorrow', author: 'Gabrielle Zevin', stars: '★★★★★', friends: ['Christina S.', 'Jordan W.', 'Carolyn C.', 'Zachary G.'] },
+        { name: 'Project Hail Mary', author: 'Andy Weir', stars: '★★★★★', friends: ['Jordan W.', 'Carolyn C.'] },
+        { name: 'Annihilation', author: 'Jeff VanderMeer', stars: '★★★★', friends: ['Daniel L.', 'Carolyn C.'] },
+        { name: "The Heart's Invisible Furies", author: 'John Boyne', stars: '★★★★★', friends: ['Zachary G.', 'Christina S.'] }
+      ]
+    },
+    'songs-may': {
+      title: 'Songs on repeat in May',
+      subtitle: 'What your friends actually listened to.',
+      link: 'Open in Spotify',
+      results: [
+        { name: 'Pink Pony Club', author: 'Chappell Roan', stars: '', friends: ['Christina S.'] },
+        { name: 'Not Like Us', author: 'Kendrick Lamar', stars: '', friends: ['Carolyn C.'] },
+        { name: 'Northern Attitude', author: 'Noah Kahan', stars: '', friends: ['Elisa S.', 'Alex W.'] },
+        { name: 'vampire', author: 'Olivia Rodrigo', stars: '', friends: ['Daniel L.'] }
+      ]
+    },
+    'movies': {
+      title: 'Movies friends loved',
+      subtitle: 'Five stars from at least one person you trust.',
+      link: 'See in Trakt',
+      results: [
+        { name: 'Past Lives', author: 'Celine Song', stars: '★★★★★', friends: ['Daniel L.'] },
+        { name: 'Anatomy of a Fall', author: 'Justine Triet', stars: '★★★★★', friends: ['Elisa S.'] },
+        { name: 'Challengers', author: 'Luca Guadagnino', stars: '★★★★★', friends: ['Daniel L.', 'Carolyn C.'] },
+        { name: 'Dune Part Two', author: 'Denis Villeneuve', stars: '★★★★', friends: ['Carolyn C.'] }
+      ]
+    },
+    'restaurants': {
+      title: 'Best restaurants this year',
+      subtitle: 'Where your friends actually went back.',
+      link: 'Search on Google Maps',
+      results: [
+        { name: 'Safta', author: 'Denver, CO', stars: '', friends: ['Christina S.'] },
+        { name: 'Time Out Market', author: 'Lisbon, Portugal', stars: '', friends: ['Carolyn C.'] },
+        { name: 'Ginger Pig', author: 'Denver, CO', stars: '', friends: ['Alex W.'] }
+      ]
+    },
+    'trips': {
+      title: 'Trip ideas from the crew',
+      subtitle: 'Places your friends actually went and would go back to.',
+      link: 'Save trip',
+      results: [
+        { name: 'Lisbon, Portugal', author: 'Spring · 5 days', stars: '', friends: ['Carolyn C.'] },
+        { name: 'Seattle, WA', author: 'Soon · permanently', stars: '', friends: ['Alex W.', 'Elisa S.'] }
+      ]
+    }
+  };
+
+  function showDiscoveryResults(promptId) {
+    const prompt = DISCOVERY_PROMPTS[promptId];
+    if (!prompt) return;
+    document.getElementById('discovery-results-title').textContent = prompt.title;
+    document.getElementById('discovery-results-subtitle').textContent = prompt.subtitle;
+    document.getElementById('discovery-results-list').innerHTML = prompt.results.map(r => `
+      <div class="discovery-card">
+        <div class="item-name">${r.name}</div>
+        <div class="item-author">${r.author}</div>
+        <div class="rating-line">
+          ${r.stars ? `<span class="stars">${r.stars}</span>` : ''}
+          <span style="color: var(--ink-muted);">× ${r.friends.length} friend${r.friends.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="friend-pills">
+          ${r.friends.map(f => `<span class="friend-pill">${f}</span>`).join('')}
+        </div>
+        <div class="link-out" onclick="showToast('${prompt.link} (just a prototype)')">${prompt.link} →</div>
+      </div>
+    `).join('');
+    goto('s3-4');
+  }
+
+  function filterDiscoveryPrompts(query) {
+    const q = query.toLowerCase().trim();
+    document.querySelectorAll('#discovery-prompts .prompt-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = !q || text.includes(q) ? 'flex' : 'none';
+    });
+  }
+
+  function runDiscoverySearch(query) {
+    const q = query.toLowerCase().trim();
+    if (!q) return;
+    // Pick the most relevant prompt
+    if (q.includes('book') || q.includes('read')) showDiscoveryResults('best-books');
+    else if (q.includes('song') || q.includes('music')) showDiscoveryResults('songs-may');
+    else if (q.includes('movie') || q.includes('show') || q.includes('watch')) showDiscoveryResults('movies');
+    else if (q.includes('restaur') || q.includes('eat')) showDiscoveryResults('restaurants');
+    else if (q.includes('trip') || q.includes('travel') || q.includes('went')) showDiscoveryResults('trips');
+    else showDiscoveryResults('best-books');
+  }
+
+  function toggleChip(el) {
+    el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    el.classList.add('on');
+  }
+
+  function toggleSegBtn(el) {
+    el.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+    el.classList.add('on');
+  }
+
+  // ========== SETTINGS ==========
+  function setCadence(cadence) {
+    appState.cadence = cadence;
+    document.querySelectorAll('#cadence-seg button').forEach(b => {
+      b.classList.toggle('on', b.dataset.cadence === cadence);
+    });
+    const dateEl = document.getElementById('settings-next-date');
+    if (dateEl) {
+      dateEl.textContent = cadence === 'weekly' ? 'Monday'
+                         : cadence === 'monthly' ? 'July 1'
+                         : 'October 1';
+    }
+    showToast('Cadence set to ' + cadence);
+  }
+
+  function toggleSettingsIntegration(name) {
+    const btn = document.querySelector('#settings-integrations [data-int="' + name + '"]');
+    if (!btn) return;
+    appState.integrations[name] = !appState.integrations[name];
+    if (appState.integrations[name]) {
+      btn.classList.add('connected');
+      btn.textContent = 'Connected ✓';
+      showToast(name + ' connected');
+    } else {
+      btn.classList.remove('connected');
+      btn.textContent = 'Connect';
+      showToast(name + ' disconnected');
+    }
+  }
+
+  function signOut() {
+    openModal('Sign out?', 'You will be returned to the invite gate. (This is a prototype, so nothing actually gets saved or lost.)', [
+      { label: 'Sign out', accent: true, action: () => { closeModal(); goto('s1-1'); } },
+      { label: 'Cancel', action: closeModal }
+    ]);
+  }
+
+  // ========== MODAL ==========
+  function openModal(title, body, actions) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').innerHTML = body;
+    const actionsEl = document.getElementById('modal-actions');
+    actionsEl.innerHTML = '';
+    (actions || []).forEach(a => {
+      const btn = document.createElement('button');
+      btn.className = 'btn ' + (a.accent ? 'btn-primary' : 'btn-secondary');
+      btn.textContent = a.label;
+      btn.onclick = a.action;
+      actionsEl.appendChild(btn);
+    });
+    document.getElementById('modal-overlay').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('show');
+  }
+
+  function openShareSheet() {
+    const post = POSTS[appState.currentPostId];
+    const who = post ? post.author + "'s post" : 'this post';
+    document.getElementById('modal-title').textContent = 'Share ' + who;
+    document.getElementById('modal-body').innerHTML = '';
+    document.getElementById('modal-actions').innerHTML = `
+      <div class="share-row" onclick="closeModal(); showToast('Sent via iMessage')">
+        <div class="icon-box" style="background: #34C759; color: white;">💬</div>
+        <div class="share-label">iMessage</div>
+      </div>
+      <div class="share-row" onclick="closeModal(); showToast('Opened Mail')">
+        <div class="icon-box" style="background: #007AFF; color: white;">✉️</div>
+        <div class="share-label">Mail</div>
+      </div>
+      <div class="share-row" onclick="closeModal(); showToast('Link copied')">
+        <div class="icon-box" style="background: var(--cream); color: var(--ink);">🔗</div>
+        <div class="share-label">Copy link</div>
+      </div>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    `;
+    document.getElementById('modal-overlay').classList.add('show');
+  }
+
+  function inviteMore() {
+    openModal('Your invite code', '<div style="text-align:center; padding: 8px 0;"><div style="font-family: var(--serif); font-size: 32px; color: var(--accent); letter-spacing: 2px;">DENVER-2026</div><p class="small mt-md">Share with friends. They need a code to join.</p></div>', [
+      { label: 'Copy code', accent: true, action: () => { closeModal(); showToast('Code copied'); } },
+      { label: 'Share via iMessage', action: () => { closeModal(); showToast('Sent via iMessage'); } },
+      { label: 'Done', action: closeModal }
+    ]);
+  }
+
+  function followAll() {
+    document.querySelectorAll('#s1-6 .follow-btn').forEach(btn => {
+      btn.classList.add('followed');
+      btn.textContent = 'Following ✓';
+    });
+    showToast('Following everyone');
+  }
+
+  function addTrip(target) {
+    const anchor = document.getElementById('trip-anchor-' + target);
+    if (!anchor) return;
+    const idx = anchor.querySelectorAll('.trip-entry').length;
+    const html = `
+      <div class="trip-entry" style="border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px;">
+        <input class="input mb-xs" placeholder="Where" />
+        <textarea class="input" rows="2" placeholder="Notes (optional)"></textarea>
+        <button class="btn btn-ghost" style="padding: 6px; font-size: 12px; margin-top: 6px; color: var(--accent);" onclick="this.parentElement.remove()">Remove this trip</button>
+      </div>
+    `;
+    anchor.insertAdjacentHTML('beforeend', html);
+  }
+
+  // ========== PHOTOS ==========
+  function autoSuggestPhotos() {
+    const picker = document.querySelector('#s2-4 .picker-grid');
+    if (!picker) return;
+    picker.querySelectorAll('.picker-photo').forEach(p => {
+      p.classList.remove('selected');
+      p.querySelector('.check').textContent = '';
+    });
+    const photos = picker.querySelectorAll('.picker-photo');
+    for (let i = 0; i < 5 && i < photos.length; i++) {
+      photos[i].classList.add('selected');
+      photos[i].querySelector('.check').textContent = (i + 1).toString();
+    }
+    showToast('Picked the top 5');
+  }
+
+  // ========== TOAST ==========
+  let toastTimeout;
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  // ========== PRD ==========
+  let prevNonPrdScreen = 's3-1';
+  function viewPRD() {
+    if (currentScreen !== 'prd') prevNonPrdScreen = currentScreen;
+    goto('prd');
+  }
+  function exitPRD() {
+    goto(prevNonPrdScreen || 's3-1');
+  }
+
+  // ========== CUSTOM SECTIONS ==========
+  let customSectionCount = 0;
+  function addCustomSection(target) {
+    customSectionCount++;
+    const id = 'custom-' + target + '-' + customSectionCount;
+    const html = `
+      <div class="editor-section" id="${id}">
+        <div class="editor-head">
+          <span style="font-size: 18px;">⭐</span>
+          <span class="label-up">Custom section</span>
+          <button class="editor-toggle-btn" onclick="removeCustomSection('${id}')">Remove</button>
+        </div>
+        <input class="input mb-xs" placeholder="Section title (e.g., Project I shipped)" />
+        <textarea class="input" rows="3" placeholder="Write something..."></textarea>
+        <div id="${id}-photo-slot" style="margin-top: 10px;">
+          <button class="btn btn-secondary" style="padding: 10px; font-size: 13px;" onclick="addCustomPhoto('${id}')">+ Add photo (optional)</button>
+        </div>
+      </div>
+    `;
+    const anchor = document.getElementById('custom-section-anchor-' + target);
+    if (anchor) anchor.insertAdjacentHTML('beforebegin', html);
+  }
+
+  function removeCustomSection(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  const photoVariants = ['p1','p2','p3','p4','p5','p6'];
+  let photoCycle = 0;
+  function addCustomPhoto(sectionId) {
+    const slot = document.getElementById(sectionId + '-photo-slot');
+    if (!slot) return;
+    const variant = photoVariants[photoCycle % photoVariants.length];
+    photoCycle++;
+    slot.innerHTML = `
+      <div class="photo ${variant}" style="aspect-ratio: 16/10; border-radius: 10px;"></div>
+      <button class="btn btn-ghost" style="padding: 8px; font-size: 12px; margin-top: 6px;" onclick="removeCustomPhoto('${sectionId}')">Remove photo</button>
+    `;
+  }
+
+  function removeCustomPhoto(sectionId) {
+    const slot = document.getElementById(sectionId + '-photo-slot');
+    if (!slot) return;
+    slot.innerHTML = `<button class="btn btn-secondary" style="padding: 10px; font-size: 13px;" onclick="addCustomPhoto('${sectionId}')">+ Add photo (optional)</button>`;
+  }
+
+  // ========== INIT ==========
+  // Pre-render Christina's detail so jumping directly to s3-2 shows real content
+  if (document.getElementById('detail-avatar')) {
+    renderPostDetail('christina');
+  } else {
+    window.addEventListener('DOMContentLoaded', () => renderPostDetail('christina'));
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'ArrowRight') nextScreen();
+    if (e.key === 'ArrowLeft') prevScreen();
+  });
+</script>
+
+</body>
+</html>
