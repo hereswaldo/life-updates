@@ -3056,9 +3056,11 @@
   function viewPRD() {
     if (currentScreen !== 'prd') prevNonPrdScreen = currentScreen;
     goto('prd');
+    if (history.replaceState) history.replaceState(null, '', '#prd');
   }
   function exitPRD() {
     goto(prevNonPrdScreen || 's3-1');
+    if (history.replaceState) history.replaceState(null, '', window.location.pathname);
   }
 
   // ========== CUSTOM SECTIONS ==========
@@ -3112,6 +3114,13 @@
   function bootApp() {
     renderFeed();
     renderPostDetail('christina');
+    // Hash-based routing: open the screen named in the URL fragment if valid
+    const hash = window.location.hash.slice(1);
+    if (hash === 'prd') {
+      viewPRD();
+    } else if (hash && document.getElementById(hash)) {
+      goto(hash);
+    }
   }
   if (document.getElementById('feed-container')) {
     bootApp();
