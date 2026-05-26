@@ -557,18 +557,16 @@
 
   /* ============ TAB BAR ============ */
   .tab-bar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(250, 246, 238, 0.92);
+    background: rgba(250, 246, 238, 0.96);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-top: 1px solid var(--border);
-    display: flex;
-    padding: 10px 16px 28px;
+    display: none;
+    padding: 10px 16px 24px;
+    flex-shrink: 0;
     z-index: 10;
   }
+  .tab-bar.show { display: flex; }
   .tab-bar button {
     flex: 1;
     background: transparent;
@@ -1948,7 +1946,7 @@
       </div>
 
       <!-- ============ FLOW 3.1 HOME FEED ============ -->
-      <div class="screen with-tabs" id="s3-1">
+      <div class="screen" id="s3-1">
         <div class="masthead">
           <div class="logo">Life Update<span class="brand-colon">:</span></div>
           <div class="tagline">May 2026 · issue no. 5</div>
@@ -1963,12 +1961,6 @@
         </div>
 
         <div id="feed-container"></div>
-        <div class="tab-bar">
-          <button class="on"><span class="tb-icon">☐</span><span>Feed</span></button>
-          <button onclick="goto('s3-3')"><span class="tb-icon">⌕</span><span>Discover</span></button>
-          <button onclick="goto('s2-3')"><span class="tb-icon">✎</span><span>Post</span></button>
-          <button onclick="goto('s4-1')"><span class="tb-icon">☰</span><span>You</span></button>
-        </div>
       </div>
 
       <!-- ============ FLOW 3.2 POST DETAIL (template, populated by JS) ============ -->
@@ -2006,7 +1998,7 @@
       </div>
 
       <!-- ============ FLOW 3.3 DISCOVERY SEARCH ============ -->
-      <div class="screen with-tabs" id="s3-3">
+      <div class="screen" id="s3-3">
         <div class="top-bar">
           <button class="back" onclick="goto('s3-1')">← Feed</button>
           <span class="title">Discover</span>
@@ -2059,12 +2051,6 @@
           </div>
         </div>
 
-        <div class="tab-bar">
-          <button onclick="goto('s3-1')"><span class="tb-icon">☐</span><span>Feed</span></button>
-          <button class="on"><span class="tb-icon">⌕</span><span>Discover</span></button>
-          <button onclick="goto('s2-3')"><span class="tb-icon">✎</span><span>Post</span></button>
-          <button onclick="goto('s4-1')"><span class="tb-icon">☰</span><span>You</span></button>
-        </div>
       </div>
 
       <!-- ============ FLOW 3.4 DISCOVERY RESULTS (template, populated by JS) ============ -->
@@ -2363,6 +2349,13 @@
       </div>
 
     </div>
+
+    <div class="tab-bar" id="tab-bar">
+      <button data-tab="feed" onclick="goto('s3-1')"><span class="tb-icon">☐</span><span>Feed</span></button>
+      <button data-tab="discover" onclick="goto('s3-3')"><span class="tb-icon">⌕</span><span>Discover</span></button>
+      <button data-tab="post" onclick="goto('s2-3')"><span class="tb-icon">✎</span><span>Post</span></button>
+      <button data-tab="you" onclick="goto('s4-1')"><span class="tb-icon">☰</span><span>You</span></button>
+    </div>
   </div>
 </div>
 
@@ -2384,8 +2377,26 @@
       currentScreen = id;
       document.getElementById('screen-jump').value = id;
       updateFlowTag(id);
+      updateTabBar(id);
       el.parentElement.scrollTop = 0;
     }
+  }
+
+  function updateTabBar(id) {
+    const tabBar = document.getElementById('tab-bar');
+    if (!tabBar) return;
+    // Hide during onboarding, posting/editing flow, lock screen, and PRD
+    const hide = id.startsWith('s1-') || id.startsWith('s2-') || id === 'prd';
+    tabBar.classList.toggle('show', !hide);
+    // Highlight the active tab
+    const activeTab =
+      (id === 's3-3' || id === 's3-4') ? 'discover' :
+      (id === 's4-1') ? 'you' :
+      (id === 's3-1' || id === 's3-2') ? 'feed' :
+      null;
+    tabBar.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('on', b.dataset.tab === activeTab);
+    });
   }
 
   function jumpScreen(id) { goto(id); }
