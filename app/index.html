@@ -447,6 +447,118 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ============ PHOTOS ============ */
+  .photos-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .photo-thumb {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    background: var(--cream);
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .photo-thumb .remove {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 22px; height: 22px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .photo-thumb.uploading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(2px);
+  }
+  .photo-thumb.uploading::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px; height: 24px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    z-index: 1;
+  }
+  .photo-large {
+    width: 100%;
+    aspect-ratio: 4/3;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--cream);
+    margin-bottom: 8px;
+  }
+
+  /* ============ CONFETTI ============ */
+  @keyframes confetti-fall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0.3; }
+  }
+  .confetti-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+  }
+  .confetti-piece {
+    position: absolute;
+    top: -20px;
+    will-change: transform;
+  }
+
+  /* ============ MODAL ============ */
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--paper);
+    border-radius: 18px;
+    padding: 22px 20px 18px;
+    max-width: 360px;
+    width: 100%;
+    margin-bottom: 30px;
+  }
+  .modal-title {
+    font-family: var(--serif);
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+  .modal-body {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .modal-actions { display: flex; flex-direction: column; gap: 8px; }
+
   .spacer { flex: 1; }
   .stack > * + * { margin-top: 12px; }
   .center { text-align: center; }
@@ -480,6 +592,13 @@
     </div>
     <div class="screen-container">
       <div class="toast" id="toast"></div>
+      <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal">
+          <div class="modal-title" id="modal-title"></div>
+          <div class="modal-body" id="modal-body"></div>
+          <div class="modal-actions" id="modal-actions"></div>
+        </div>
+      </div>
 
       <!-- LOADING -->
       <div class="screen active" id="screen-loading">
@@ -661,13 +780,45 @@
 
         <div class="editor-section">
           <div class="editor-head">
+            <span style="font-size: 18px;">📷</span>
+            <span class="label-up">Photos</span>
+          </div>
+          <div class="photos-grid" id="compose-photos-grid"></div>
+          <input type="file" id="photo-input" accept="image/*" multiple style="display:none;" onchange="onPhotoSelect(event)" />
+          <button class="btn btn-secondary" style="padding: 10px; font-size: 13px; margin-top: 10px;" onclick="document.getElementById('photo-input').click()">+ Add photos</button>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-head">
             <span style="font-size: 18px;">💭</span>
             <span class="label-up">Life update</span>
           </div>
           <textarea class="input" id="compose-life-update" rows="4" placeholder="What else worth sharing?"></textarea>
         </div>
 
-        <button class="btn btn-accent mt-md" onclick="publishPost()">Publish to friends</button>
+        <button class="btn btn-accent mt-md" onclick="publishPost()">Publish to friends 🎉</button>
+        <button class="btn btn-ghost mt-md" id="compose-delete" style="display: none; color: var(--accent);" onclick="deletePost()">Delete this post</button>
+      </div>
+
+      <!-- PROFILE EDIT -->
+      <div class="screen" id="screen-profile-edit">
+        <div class="top-bar">
+          <button class="back" onclick="showScreen('settings')">← Back</button>
+          <span class="title">Edit profile</span>
+          <button class="action" onclick="saveProfile()">Save</button>
+        </div>
+
+        <label class="field-label">Display name</label>
+        <input class="input mb-sm" id="edit-name" />
+
+        <label class="field-label mt-md">Handle</label>
+        <input class="input mb-sm" id="edit-handle" autocapitalize="off" autocomplete="off" />
+        <p class="small">3-20 characters, letters/numbers/underscore.</p>
+
+        <label class="field-label mt-md">City (optional)</label>
+        <input class="input mb-sm" id="edit-city" />
+
+        <div class="field-error" id="edit-error" style="display:none;"></div>
       </div>
 
       <!-- SETTINGS -->
@@ -691,7 +842,8 @@
           <p class="small">Everything is manual right now — no integrations, no automation. You post on your own schedule, your friends see it, you comment on each other's. That's the whole thing.</p>
         </div>
 
-        <button class="btn btn-secondary mt-md" onclick="signOut()">Sign out</button>
+        <button class="btn btn-secondary mt-md" onclick="openEditProfile()">Edit profile</button>
+        <button class="btn btn-ghost mt-md" style="color: var(--accent);" onclick="signOut()">Sign out</button>
         <p class="small center mt-md" style="color: var(--ink-muted);">Bugs? Ideas? Text Alex.</p>
       </div>
     </div>
@@ -908,6 +1060,10 @@
           </div>
         </div>
       `).join('');
+      const photos = (p.photos || []).slice(0, 3);
+      const photosHTML = photos.length
+        ? `<div class="photos-grid" style="margin-top: 12px;">${photos.map(url => `<div class="photo-thumb" style="background-image: url('${escapeHTML(url)}');"></div>`).join('')}</div>`
+        : '';
       return `
         <div class="post-card" onclick="viewPost('${p.id}')">
           <div class="post-header">
@@ -920,6 +1076,7 @@
           </div>
           ${p.title ? `<div class="post-title-display">${escapeHTML(p.title)}</div>` : ''}
           ${sections}
+          ${photosHTML}
           ${p.life_update ? `<div class="post-text">"${escapeHTML(p.life_update)}"</div>` : ''}
           <div class="post-footer">● ${p.comment_count} comment${p.comment_count === 1 ? '' : 's'}</div>
         </div>
@@ -964,6 +1121,18 @@
         </div>
       </div>
     `).join('');
+
+    const photosWrap = $('detail-photos') || (() => {
+      const el = document.createElement('div');
+      el.id = 'detail-photos';
+      $('detail-sections').after(el);
+      return el;
+    })();
+    const photos = post.photos || [];
+    photosWrap.innerHTML = photos.length
+      ? '<div class="post-section-title" style="margin-bottom: 8px; padding-left: 4px; padding-top: 12px;">Photos</div>' +
+        photos.map(url => `<div class="photo-large" style="background-image: url('${escapeHTML(url)}');"></div>`).join('')
+      : '';
 
     const textEl = $('detail-text');
     if (post.life_update) {
@@ -1043,12 +1212,14 @@
       .eq('issue_month', issueMonth)
       .maybeSingle();
 
+    editingPostId = existing?.id || null;
+    $('compose-delete').style.display = existing ? 'block' : 'none';
+
     $('compose-title').value = existing?.title || '';
     $('compose-life-update').value = existing?.life_update || '';
     document.querySelectorAll('[data-section]').forEach(el => { el.value = ''; });
     if (existing?.sections) {
       existing.sections.forEach(s => {
-        // Reverse-map by template title to find the key
         const key = Object.entries(SECTION_TEMPLATES).find(([k, t]) => t.title === s.title)?.[0];
         if (key) {
           const valEl = document.querySelector(`[data-section="${key}-value"]`);
@@ -1058,6 +1229,8 @@
         }
       });
     }
+    composePhotos = (existing?.photos || []).map(url => ({ url }));
+    renderComposePhotos();
     showScreen('compose');
   }
 
@@ -1088,11 +1261,13 @@
     btn.disabled = true;
     btn.textContent = 'Publishing…';
     const issueMonth = currentIssueMonth();
+    const photos = composePhotos.filter(p => p.url).map(p => p.url);
     const payload = {
       author_id: me.id,
       issue_month: issueMonth,
       title,
       sections,
+      photos,
       life_update: lifeUpdate,
       is_published: true,
       published_at: new Date().toISOString(),
@@ -1111,6 +1286,7 @@
         console.error('[publish] supabase error:', error);
         return;
       }
+      fireConfetti();
       showToast('Published 🎉');
       await loadFeed();
       showScreen('feed');
@@ -1121,6 +1297,164 @@
       btn.disabled = false;
       btn.textContent = 'Publish';
     }
+  }
+
+  // ============ PHOTOS ============
+  let composePhotos = []; // current photo URLs in the composer
+
+  async function onPhotoSelect(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = ''; // allow re-selecting the same file
+    if (!files.length) return;
+    if (composePhotos.length + files.length > 5) {
+      showToast('Max 5 photos per post');
+      return;
+    }
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast(`"${file.name}" is too large (max 5MB)`);
+        continue;
+      }
+      // Show optimistic uploading placeholder
+      const tmpId = 'tmp-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+      composePhotos.push({ tmpId, url: null });
+      renderComposePhotos();
+      const url = await uploadPhoto(file);
+      const idx = composePhotos.findIndex(p => p.tmpId === tmpId);
+      if (url) {
+        composePhotos[idx] = { url };
+      } else {
+        composePhotos.splice(idx, 1);
+      }
+      renderComposePhotos();
+    }
+  }
+
+  async function uploadPhoto(file) {
+    if (!me) return null;
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const path = `${me.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const { error } = await sb.storage.from('photos').upload(path, file, { upsert: false });
+    if (error) {
+      console.error('[upload] error:', error);
+      if (error.message && error.message.toLowerCase().includes('bucket')) {
+        showToast('Photos bucket missing — create one named "photos" in Supabase Storage');
+      } else {
+        showToast('Upload failed: ' + error.message);
+      }
+      return null;
+    }
+    const { data } = sb.storage.from('photos').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
+  function removeComposePhoto(idx) {
+    composePhotos.splice(idx, 1);
+    renderComposePhotos();
+  }
+
+  function renderComposePhotos() {
+    const grid = $('compose-photos-grid');
+    if (!composePhotos.length) { grid.innerHTML = ''; return; }
+    grid.innerHTML = composePhotos.map((p, i) => {
+      if (!p.url) {
+        return `<div class="photo-thumb uploading"></div>`;
+      }
+      return `<div class="photo-thumb" style="background-image: url('${escapeHTML(p.url)}');">
+        <button class="remove" onclick="removeComposePhoto(${i})">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  // ============ DELETE POST ============
+  let editingPostId = null;
+
+  async function deletePost() {
+    if (!editingPostId) return;
+    openModal('Delete this post?', 'This removes your post and all comments on it. Friends will no longer see it. This cannot be undone.', [
+      { label: 'Delete', accent: true, action: async () => {
+        closeModal();
+        const { error } = await sb.from('posts').delete().eq('id', editingPostId);
+        if (error) { showToast('Delete failed: ' + error.message); return; }
+        editingPostId = null;
+        composePhotos = [];
+        showToast('Post deleted');
+        await loadFeed();
+        showScreen('feed');
+      }},
+      { label: 'Cancel', action: closeModal }
+    ]);
+  }
+
+  // ============ CONFETTI ============
+  function fireConfetti() {
+    const colors = ['#C04F2D', '#E8B33C', '#6B8AC4', '#6B7F3D', '#E89A8F'];
+    const container = document.createElement('div');
+    container.className = 'confetti-container';
+    document.body.appendChild(container);
+    for (let i = 0; i < 50; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      const size = 6 + Math.random() * 8;
+      piece.style.left = (Math.random() * 100) + '%';
+      piece.style.width = size + 'px';
+      piece.style.height = size + 'px';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+      piece.style.animation = `confetti-fall ${2 + Math.random() * 1.5}s ${Math.random() * 0.4}s ease-in forwards`;
+      container.appendChild(piece);
+    }
+    setTimeout(() => container.remove(), 4500);
+  }
+
+  // ============ MODAL ============
+  function openModal(title, body, actions) {
+    $('modal-title').textContent = title;
+    $('modal-body').textContent = body;
+    const wrap = $('modal-actions');
+    wrap.innerHTML = '';
+    (actions || []).forEach(a => {
+      const btn = document.createElement('button');
+      btn.className = 'btn ' + (a.accent ? 'btn-primary' : 'btn-secondary');
+      btn.textContent = a.label;
+      btn.onclick = a.action;
+      wrap.appendChild(btn);
+    });
+    $('modal-overlay').classList.add('show');
+  }
+  function closeModal() { $('modal-overlay').classList.remove('show'); }
+
+  // ============ PROFILE EDIT ============
+  function openEditProfile() {
+    if (!me) return;
+    $('edit-name').value = me.display_name || '';
+    $('edit-handle').value = me.handle || '';
+    $('edit-city').value = me.city || '';
+    $('edit-error').style.display = 'none';
+    showScreen('profile-edit');
+  }
+
+  async function saveProfile() {
+    const display_name = $('edit-name').value.trim();
+    const handle = $('edit-handle').value.trim().toLowerCase().replace(/^@/, '');
+    const city = $('edit-city').value.trim();
+    const errEl = $('edit-error');
+    errEl.style.display = 'none';
+    if (!display_name) { errEl.textContent = 'Display name is required.'; errEl.style.display = 'block'; return; }
+    if (!handle.match(/^[a-z0-9_]{3,20}$/)) { errEl.textContent = 'Handle must be 3-20 letters/numbers/underscore.'; errEl.style.display = 'block'; return; }
+    const initials = initialsFrom(display_name);
+    const { data, error } = await sb.from('profiles').update({
+      display_name, handle, city: city || null, initials
+    }).eq('id', me.id).select().single();
+    if (error) {
+      errEl.textContent = error.message.includes('duplicate') ? 'That handle is taken.' : error.message;
+      errEl.style.display = 'block';
+      return;
+    }
+    me = data;
+    showToast('Profile saved');
+    openSettings();
   }
 
   // ============ SETTINGS ============
