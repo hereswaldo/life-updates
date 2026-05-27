@@ -626,7 +626,7 @@
         <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
           <div class="loader"></div>
           <p class="small" style="margin-top: 16px;">Loading…</p>
-          <div id="loading-debug" style="margin-top: 24px; padding: 12px; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 11px; color: var(--ink-soft); max-width: 320px; max-height: 240px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;"></div>
+          <div id="loading-debug" style="display: none; margin-top: 24px; padding: 12px; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 11px; color: var(--ink-soft); max-width: 320px; max-height: 240px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;"></div>
         </div>
       </div>
 
@@ -1504,10 +1504,13 @@
     }
   }
 
+  const DEBUG_MODE = window.location.search.includes('debug=1');
   function debug(msg) {
     console.log(msg);
+    if (!DEBUG_MODE) return;
     const el = $('loading-debug');
     if (el) {
+      el.style.display = 'block';
       const time = new Date().toISOString().slice(11, 19);
       el.textContent += `[${time}] ${msg}\n`;
       el.scrollTop = el.scrollHeight;
