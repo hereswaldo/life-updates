@@ -1489,25 +1489,59 @@
 
   // ============ INIT ============
   let authHandled = false;
+
+  function clearSupabaseLocalStorage() {
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.warn('[clearStorage] failed:', e);
+    }
+  }
+
   async function init() {
-    // Safety timeout: if we're stuck on loading after 8s, fall back to signin
+    // Safety timeout: if we're stuck on loading after 10s, fall back to signin
     setTimeout(() => {
       const loadingActive = $('screen-loading')?.classList.contains('active');
       if (loadingActive && !authHandled) {
         console.warn('[init] loading timeout, falling back to signin');
+        clearSupabaseLocalStorage();
         showScreen('signin');
         showToast('Loading took too long. Try signing in again.');
       }
-    }, 8000);
+    }, 10000);
 
-    // Listen for auth state changes (handles magic link return)
+    // If URL has access_token (just clicked magic link), nuke any stale session first
+    // so the new tokens take priority.
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      console.log('[init] URL has access_token, clearing stale session');
+      clearSupabaseLocalStorage();
+      const params = new URLSearchParams(hash.slice(1));
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      if (access_token && refresh_token) {
+        try {
+          const { error } = await sb.auth.setSession({ access_token, refresh_token });
+          if (error) throw error;
+          window.history.replaceState(null, '', window.location.pathname);
+        } catch (err) {
+          console.error('[init] setSession failed:', err);
+          showScreen('signin');
+          showToast('Sign-in failed: ' + (err.message || 'unknown'));
+          return;
+        }
+      }
+    }
+
+    // Listen for auth state changes
     sb.auth.onAuthStateChange(async (event, session) => {
       console.log('[auth event]', event, session?.user?.email);
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-        // Clean the URL hash from magic link
-        if (window.location.hash.includes('access_token') || window.location.hash.includes('error')) {
-          window.history.replaceState(null, '', window.location.pathname);
-        }
         if (!authHandled) {
           authHandled = true;
           await onAuthed(session);
@@ -1516,13 +1550,27 @@
         authHandled = false;
         me = null;
         showScreen('signin');
+      } else if (event === 'TOKEN_REFRESHED' && !session) {
+        // Token refresh failed - clear stale state
+        console.warn('[auth] token refresh failed, clearing');
+        clearSupabaseLocalStorage();
+        authHandled = false;
+        showScreen('signin');
+        showToast('Session expired. Please sign in again.');
       }
     });
 
     // Check existing session
     try {
       const { data: { session }, error } = await sb.auth.getSession();
-      if (error) throw error;
+      if (error) {
+        // Stale or invalid session — clear and show signin
+        console.error('[init] getSession error:', error);
+        clearSupabaseLocalStorage();
+        showScreen('signin');
+        showToast('Please sign in again.');
+        return;
+      }
       if (session && !authHandled) {
         authHandled = true;
         await onAuthed(session);
@@ -1530,9 +1578,10 @@
         showScreen('signin');
       }
     } catch (err) {
-      console.error('[init] getSession error:', err);
+      console.error('[init] init error:', err);
+      clearSupabaseLocalStorage();
       showScreen('signin');
-      showToast('Could not check session: ' + (err.message || 'unknown'));
+      showToast('Please sign in: ' + (err.message || 'unknown'));
     }
   }
 
