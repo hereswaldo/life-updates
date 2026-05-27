@@ -1076,7 +1076,7 @@
   }
 
   async function publishPost() {
-    if (!me) return;
+    if (!me) { console.error('No me'); showToast('Not signed in'); return; }
     const title = $('compose-title').value.trim() || null;
     const lifeUpdate = $('compose-life-update').value.trim() || null;
     const sections = collectSections();
@@ -1098,17 +1098,29 @@
       published_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    const { error } = await sb.from('posts').upsert(payload, { onConflict: 'author_id,issue_month' });
-    btn.disabled = false;
-    btn.textContent = 'Publish';
-    if (error) {
-      console.error(error);
-      showToast('Publish failed: ' + error.message);
-      return;
+    console.log('[publish] payload:', payload);
+    try {
+      const { data, error } = await sb
+        .from('posts')
+        .upsert(payload, { onConflict: 'author_id,issue_month' })
+        .select()
+        .single();
+      console.log('[publish] result:', { data, error });
+      if (error) {
+        showToast('Publish failed: ' + error.message);
+        console.error('[publish] supabase error:', error);
+        return;
+      }
+      showToast('Published 🎉');
+      await loadFeed();
+      showScreen('feed');
+    } catch (err) {
+      console.error('[publish] exception:', err);
+      showToast('Publish error: ' + (err.message || 'unknown'));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Publish';
     }
-    showToast('Published 🎉');
-    await loadFeed();
-    showScreen('feed');
   }
 
   // ============ SETTINGS ============
