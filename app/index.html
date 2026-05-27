@@ -396,7 +396,7 @@
     -webkit-backdrop-filter: blur(20px);
     border-top: 1px solid var(--border);
     display: none;
-    padding: 10px 16px max(24px, env(safe-area-inset-bottom));
+    padding: 8px 16px max(20px, env(safe-area-inset-bottom));
     flex-shrink: 0;
   }
   .tab-bar.show { display: flex; }
@@ -411,10 +411,11 @@
     font-size: 11px;
     color: var(--ink-muted);
     cursor: pointer;
-    padding: 6px 0;
+    padding: 8px 0;
+    min-height: 48px;
   }
   .tab-bar button.on { color: var(--accent); }
-  .tab-bar button .tb-icon { font-size: 22px; }
+  .tab-bar button .tb-icon { font-size: 24px; line-height: 1; }
 
   .toast {
     position: absolute;
@@ -582,6 +583,22 @@
     }
     .notch { display: none; }
     .status-bar { display: none; }
+    /* Pin tab bar to viewport bottom on mobile so browser chrome can't cover it */
+    .tab-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 60;
+    }
+    /* Reserve bottom space on every screen so the pinned tab-bar doesn't cover content */
+    .screen {
+      padding-bottom: 110px;
+    }
+    /* Toast positions above the tab bar */
+    .toast {
+      bottom: 130px;
+    }
   }
 </style>
 </head>
