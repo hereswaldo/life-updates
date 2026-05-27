@@ -626,6 +626,7 @@
         <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
           <div class="loader"></div>
           <p class="small" style="margin-top: 16px;">Loading…</p>
+          <div id="loading-debug" style="margin-top: 24px; padding: 12px; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 11px; color: var(--ink-soft); max-width: 320px; max-height: 240px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;"></div>
         </div>
       </div>
 
@@ -1503,34 +1504,51 @@
     }
   }
 
+  function debug(msg) {
+    console.log(msg);
+    const el = $('loading-debug');
+    if (el) {
+      const time = new Date().toISOString().slice(11, 19);
+      el.textContent += `[${time}] ${msg}\n`;
+      el.scrollTop = el.scrollHeight;
+    }
+  }
+
   async function init() {
-    // Safety timeout: if we're stuck on loading after 10s, fall back to signin
+    debug('init: start');
+    debug('url: ' + window.location.href.slice(0, 120));
+    const hash = window.location.hash;
+    debug('hash: ' + (hash ? (hash.slice(0, 60) + (hash.length > 60 ? '…' : '')) : 'none'));
+
+    // Safety timeout: if we're stuck on loading after 15s, fall back to signin
     setTimeout(() => {
       const loadingActive = $('screen-loading')?.classList.contains('active');
       if (loadingActive && !authHandled) {
-        console.warn('[init] loading timeout, falling back to signin');
+        debug('TIMEOUT: falling back to signin');
         clearSupabaseLocalStorage();
         showScreen('signin');
         showToast('Loading took too long. Try signing in again.');
       }
-    }, 10000);
+    }, 15000);
 
     // If URL has access_token (just clicked magic link), nuke any stale session first
-    // so the new tokens take priority.
-    const hash = window.location.hash;
     if (hash && hash.includes('access_token')) {
-      console.log('[init] URL has access_token, clearing stale session');
+      debug('hash has access_token, clearing stale storage');
       clearSupabaseLocalStorage();
       const params = new URLSearchParams(hash.slice(1));
       const access_token = params.get('access_token');
       const refresh_token = params.get('refresh_token');
+      debug('access_token: ' + (access_token ? 'present (' + access_token.length + ' chars)' : 'MISSING'));
+      debug('refresh_token: ' + (refresh_token ? 'present' : 'MISSING'));
       if (access_token && refresh_token) {
         try {
+          debug('calling setSession...');
           const { error } = await sb.auth.setSession({ access_token, refresh_token });
           if (error) throw error;
+          debug('setSession OK');
           window.history.replaceState(null, '', window.location.pathname);
         } catch (err) {
-          console.error('[init] setSession failed:', err);
+          debug('setSession FAILED: ' + err.message);
           showScreen('signin');
           showToast('Sign-in failed: ' + (err.message || 'unknown'));
           return;
@@ -1538,9 +1556,9 @@
       }
     }
 
-    // Listen for auth state changes
+    debug('setting up auth listener');
     sb.auth.onAuthStateChange(async (event, session) => {
-      console.log('[auth event]', event, session?.user?.email);
+      debug('auth event: ' + event + ' / ' + (session?.user?.email || 'no session'));
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
         if (!authHandled) {
           authHandled = true;
@@ -1551,8 +1569,7 @@
         me = null;
         showScreen('signin');
       } else if (event === 'TOKEN_REFRESHED' && !session) {
-        // Token refresh failed - clear stale state
-        console.warn('[auth] token refresh failed, clearing');
+        debug('token refresh failed, clearing');
         clearSupabaseLocalStorage();
         authHandled = false;
         showScreen('signin');
@@ -1560,12 +1577,11 @@
       }
     });
 
-    // Check existing session
+    debug('calling getSession...');
     try {
       const { data: { session }, error } = await sb.auth.getSession();
+      debug('getSession returned: ' + (session ? 'session ✓' : 'no session') + (error ? ' / error: ' + error.message : ''));
       if (error) {
-        // Stale or invalid session — clear and show signin
-        console.error('[init] getSession error:', error);
         clearSupabaseLocalStorage();
         showScreen('signin');
         showToast('Please sign in again.');
@@ -1578,7 +1594,7 @@
         showScreen('signin');
       }
     } catch (err) {
-      console.error('[init] init error:', err);
+      debug('init catch: ' + err.message);
       clearSupabaseLocalStorage();
       showScreen('signin');
       showToast('Please sign in: ' + (err.message || 'unknown'));
@@ -1587,7 +1603,7 @@
 
   async function onAuthed(session) {
     try {
-      console.log('[onAuthed] checking profile for', session.user.email);
+      debug('onAuthed: checking profile for ' + session.user.email);
       const { data: profile, error } = await sb
         .from('profiles')
         .select('*')
@@ -1595,20 +1611,19 @@
         .maybeSingle();
       if (error) throw error;
       if (!profile) {
-        console.log('[onAuthed] no profile, showing setup');
+        debug('no profile, showing setup');
         showScreen('profile-setup');
         return;
       }
-      console.log('[onAuthed] profile loaded:', profile.handle);
+      debug('profile loaded: ' + profile.handle);
       me = profile;
-      // Show the feed UI immediately, then load data async so we don't block
       showScreen('feed');
       loadFeed().catch(err => {
         console.error('[onAuthed] loadFeed error:', err);
         showToast('Could not load feed');
       });
     } catch (err) {
-      console.error('[onAuthed] error:', err);
+      debug('onAuthed FAILED: ' + (err.message || 'unknown'));
       showToast('Sign-in error: ' + (err.message || 'unknown'));
       showScreen('signin');
     }
