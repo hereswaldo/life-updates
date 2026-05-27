@@ -1488,49 +1488,81 @@
   }
 
   // ============ INIT ============
+  let authHandled = false;
   async function init() {
+    // Safety timeout: if we're stuck on loading after 8s, fall back to signin
+    setTimeout(() => {
+      const loadingActive = $('screen-loading')?.classList.contains('active');
+      if (loadingActive && !authHandled) {
+        console.warn('[init] loading timeout, falling back to signin');
+        showScreen('signin');
+        showToast('Loading took too long. Try signing in again.');
+      }
+    }, 8000);
+
     // Listen for auth state changes (handles magic link return)
     sb.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
+      console.log('[auth event]', event, session?.user?.email);
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
         // Clean the URL hash from magic link
         if (window.location.hash.includes('access_token') || window.location.hash.includes('error')) {
           window.history.replaceState(null, '', window.location.pathname);
         }
-        await onAuthed(session);
+        if (!authHandled) {
+          authHandled = true;
+          await onAuthed(session);
+        }
       } else if (event === 'SIGNED_OUT') {
+        authHandled = false;
         me = null;
         showScreen('signin');
       }
     });
 
     // Check existing session
-    const { data: { session } } = await sb.auth.getSession();
-    if (session) {
-      await onAuthed(session);
-    } else {
+    try {
+      const { data: { session }, error } = await sb.auth.getSession();
+      if (error) throw error;
+      if (session && !authHandled) {
+        authHandled = true;
+        await onAuthed(session);
+      } else if (!session) {
+        showScreen('signin');
+      }
+    } catch (err) {
+      console.error('[init] getSession error:', err);
       showScreen('signin');
+      showToast('Could not check session: ' + (err.message || 'unknown'));
     }
   }
 
   async function onAuthed(session) {
-    // Check if profile exists
-    const { data: profile, error } = await sb
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .maybeSingle();
-    if (error) {
-      console.error('Profile load error:', error);
-      showToast('Error loading profile');
-      return;
+    try {
+      console.log('[onAuthed] checking profile for', session.user.email);
+      const { data: profile, error } = await sb
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!profile) {
+        console.log('[onAuthed] no profile, showing setup');
+        showScreen('profile-setup');
+        return;
+      }
+      console.log('[onAuthed] profile loaded:', profile.handle);
+      me = profile;
+      // Show the feed UI immediately, then load data async so we don't block
+      showScreen('feed');
+      loadFeed().catch(err => {
+        console.error('[onAuthed] loadFeed error:', err);
+        showToast('Could not load feed');
+      });
+    } catch (err) {
+      console.error('[onAuthed] error:', err);
+      showToast('Sign-in error: ' + (err.message || 'unknown'));
+      showScreen('signin');
     }
-    if (!profile) {
-      showScreen('profile-setup');
-      return;
-    }
-    me = profile;
-    await loadFeed();
-    showScreen('feed');
   }
 
   init();
