@@ -1745,31 +1745,7 @@
       }
     }, 6000);
 
-    // If URL has access_token (just clicked magic link), nuke any stale session first
-    if (hash && hash.includes('access_token')) {
-      debug('hash has access_token, clearing stale storage');
-      clearSupabaseLocalStorage();
-      const params = new URLSearchParams(hash.slice(1));
-      const access_token = params.get('access_token');
-      const refresh_token = params.get('refresh_token');
-      debug('access_token: ' + (access_token ? 'present (' + access_token.length + ' chars)' : 'MISSING'));
-      debug('refresh_token: ' + (refresh_token ? 'present' : 'MISSING'));
-      if (access_token && refresh_token) {
-        try {
-          debug('calling setSession...');
-          const { error } = await sb.auth.setSession({ access_token, refresh_token });
-          if (error) throw error;
-          debug('setSession OK');
-          window.history.replaceState(null, '', window.location.pathname);
-        } catch (err) {
-          debug('setSession FAILED: ' + err.message);
-          showScreen('signin');
-          showToast('Sign-in failed: ' + (err.message || 'unknown'));
-          return;
-        }
-      }
-    }
-
+    // Set up auth listener BEFORE we process any tokens so we never miss an event
     debug('setting up auth listener');
     sb.auth.onAuthStateChange(async (event, session) => {
       debug('auth event: ' + event + ' / ' + (session?.user?.email || 'no session'));
@@ -1791,9 +1767,47 @@
       }
     });
 
+    // Magic-link return: hash carries access_token + refresh_token. Process synchronously
+    // and short-circuit on success so we never race with getSession().
+    if (hash && hash.includes('access_token')) {
+      debug('hash has access_token, clearing stale storage');
+      clearSupabaseLocalStorage();
+      const hashParams = new URLSearchParams(hash.slice(1));
+      const access_token = hashParams.get('access_token');
+      const refresh_token = hashParams.get('refresh_token');
+      debug('access_token: ' + (access_token ? 'present (' + access_token.length + ' chars)' : 'MISSING'));
+      debug('refresh_token: ' + (refresh_token ? 'present' : 'MISSING'));
+      if (access_token && refresh_token) {
+        try {
+          debug('calling setSession...');
+          const { data, error } = await sb.auth.setSession({ access_token, refresh_token });
+          if (error) throw error;
+          debug('setSession OK, session: ' + (data?.session ? 'yes' : 'no'));
+          window.history.replaceState(null, '', window.location.pathname);
+          // Short-circuit: drive onAuthed directly with the session we just got.
+          // Do NOT fall through to getSession() — that path can race and time out
+          // even though we are authenticated.
+          if (data?.session && !authHandled) {
+            authHandled = true;
+            await onAuthed(data.session);
+          }
+          return;
+        } catch (err) {
+          debug('setSession FAILED: ' + (err.message || err));
+          showScreen('signin');
+          showToast('Sign-in failed: ' + (err.message || 'unknown'));
+          return;
+        }
+      } else {
+        debug('hash present but tokens missing — showing signin');
+        showScreen('signin');
+        return;
+      }
+    }
+
     // Fast path: no stored auth token, go straight to signin without awaiting getSession.
     // This makes hard refresh snappy for signed-out users (and after a sign-out).
-    if (!hasStoredAuthToken() && !(hash && hash.includes('access_token'))) {
+    if (!hasStoredAuthToken()) {
       debug('no stored token — straight to signin');
       showScreen('signin');
       return;
