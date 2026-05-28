@@ -1703,6 +1703,16 @@
     }
   }
 
+  function hasStoredAuthToken() {
+    try {
+      const ref = 'gcdpnwpsiibpllkmmtfs';
+      const key = 'sb-' + ref + '-auth-token';
+      return !!localStorage.getItem(key);
+    } catch (e) {
+      return false;
+    }
+  }
+
   async function init() {
     debug('init: start');
     debug('url: ' + window.location.href.slice(0, 120));
@@ -1710,16 +1720,14 @@
     const hash = window.location.hash;
     debug('hash: ' + (hash ? (hash.slice(0, 60) + (hash.length > 60 ? '…' : '')) : 'none'));
 
-    // Safety timeout: if we're stuck on loading after 15s, fall back to signin
+    // Safety timeout: if we're stuck on loading, fall back to signin
     setTimeout(() => {
       const loadingActive = $('screen-loading')?.classList.contains('active');
       if (loadingActive && !authHandled) {
         debug('TIMEOUT: falling back to signin');
-        clearSupabaseLocalStorage();
         showScreen('signin');
-        showToast('Loading took too long. Try signing in again.');
       }
-    }, 15000);
+    }, 6000);
 
     // If URL has access_token (just clicked magic link), nuke any stale session first
     if (hash && hash.includes('access_token')) {
@@ -1767,9 +1775,31 @@
       }
     });
 
-    debug('calling getSession...');
+    // Fast path: no stored auth token, go straight to signin without awaiting getSession.
+    // This makes hard refresh snappy for signed-out users (and after a sign-out).
+    if (!hasStoredAuthToken() && !(hash && hash.includes('access_token'))) {
+      debug('no stored token — straight to signin');
+      showScreen('signin');
+      return;
+    }
+
+    debug('calling getSession (4s timeout)...');
     try {
-      const { data: { session }, error } = await sb.auth.getSession();
+      const sessionResult = await Promise.race([
+        sb.auth.getSession(),
+        new Promise(resolve => setTimeout(() => resolve({ __timeout: true }), 4000))
+      ]);
+
+      if (sessionResult.__timeout) {
+        debug('getSession TIMED OUT after 4s');
+        if (!authHandled) {
+          // Listener will still fire later if session resolves; meanwhile show signin
+          showScreen('signin');
+        }
+        return;
+      }
+
+      const { data: { session }, error } = sessionResult;
       debug('getSession returned: ' + (session ? 'session ✓' : 'no session') + (error ? ' / error: ' + error.message : ''));
       if (error) {
         clearSupabaseLocalStorage();
@@ -1784,10 +1814,9 @@
         showScreen('signin');
       }
     } catch (err) {
-      debug('init catch: ' + err.message);
+      debug('init catch: ' + (err.message || err));
       clearSupabaseLocalStorage();
       showScreen('signin');
-      showToast('Please sign in: ' + (err.message || 'unknown'));
     }
   }
 
