@@ -844,6 +844,34 @@
       </div>
 
       <!-- SETTINGS -->
+      <!-- FRIENDS / CIRCLE -->
+      <div class="screen" id="screen-friends">
+        <div class="masthead">
+          <div class="logo">Life Update<span class="colon">:</span></div>
+          <div class="tagline">your circle</div>
+        </div>
+
+        <div class="feed-header">
+          <div class="month">Add friends</div>
+        </div>
+
+        <div class="card mb-md">
+          <p class="small mb-xs" style="font-weight: 600; color: var(--ink);">How it works</p>
+          <p class="small" style="line-height: 1.55;">Life Update<span style="color: var(--accent);">:</span> is invite-only. Share your personal link with the friends you actually want to keep up with. When they sign up via your link, you are automatically connected and can see each other's posts.</p>
+        </div>
+
+        <button class="btn btn-accent mb-sm" onclick="shareInviteLink()" id="friends-share-btn">📨 Share my invite link</button>
+        <button class="btn btn-secondary" onclick="copyInviteLink()">Copy link instead</button>
+
+        <div style="margin-top: 28px;">
+          <div class="feed-header" style="margin-bottom: 8px;">
+            <div class="month" style="font-size: 22px;">Your circle</div>
+            <span class="small" id="circle-count" style="color: var(--ink-muted);"></span>
+          </div>
+          <div id="circle-list"></div>
+        </div>
+      </div>
+
       <div class="screen" id="screen-settings">
         <div class="top-bar">
           <button class="back" onclick="showScreen('feed')">← Feed</button>
@@ -872,6 +900,7 @@
 
     <div class="tab-bar" id="tab-bar">
       <button data-tab="feed" onclick="showScreen('feed')"><span class="tb-icon">☐</span><span>Feed</span></button>
+      <button data-tab="friends" onclick="openFriends()"><span class="tb-icon">○○</span><span>Friends</span></button>
       <button data-tab="post" onclick="openComposer()"><span class="tb-icon">✎</span><span>Post</span></button>
       <button data-tab="you" onclick="openSettings()"><span class="tb-icon">☰</span><span>You</span></button>
     </div>
@@ -941,6 +970,7 @@
     tabBar.querySelectorAll('button').forEach(b => {
       const tab = b.dataset.tab;
       const isOn = (tab === 'feed' && (id === 'feed' || id === 'detail')) ||
+                   (tab === 'friends' && id === 'friends') ||
                    (tab === 'you' && id === 'settings');
       b.classList.toggle('on', isOn);
     });
@@ -1029,6 +1059,7 @@
     }
 
     me = data;
+    await processPendingInvite();
     await loadFeed();
     showScreen('feed');
     showToast('Welcome to Life Update:');
@@ -1062,9 +1093,10 @@
     if (!posts.length) {
       list.innerHTML = `
         <div class="empty-state">
-          <div class="icon">📭</div>
-          <div class="title">Quiet around here.</div>
-          <div class="body">No posts yet. Be the first — tap "+ New post" above.</div>
+          <div class="icon">🌱</div>
+          <div class="title">Your feed is empty.</div>
+          <div class="body">Share your invite link with the friends you want to keep up with. Their posts will show up here once they sign up.</div>
+          <button class="btn btn-accent" style="margin-top: 18px; max-width: 260px;" onclick="openFriends()">Add friends</button>
         </div>
       `;
       return;
@@ -1479,6 +1511,144 @@
     openSettings();
   }
 
+  // ============ FRIENDS / CIRCLE ============
+  function inviteLinkForMe() {
+    if (!me) return '';
+    const base = window.location.origin + window.location.pathname;
+    return base + '?invite=' + me.id;
+  }
+
+  async function openFriends() {
+    if (!me) return;
+    showScreen('friends');
+    await loadCircle();
+  }
+
+  async function loadCircle() {
+    // Find profiles that are mutual with me: I follow them AND they follow me
+    const { data: outgoing, error: e1 } = await sb
+      .from('follows')
+      .select('followed_id')
+      .eq('follower_id', me.id);
+    if (e1) {
+      console.error('circle outgoing error:', e1);
+      $('circle-list').innerHTML = `<p class="small" style="color: var(--ink-muted);">Could not load your circle.</p>`;
+      return;
+    }
+    const outgoingIds = (outgoing || []).map(r => r.followed_id);
+
+    const { data: incoming, error: e2 } = await sb
+      .from('follows')
+      .select('follower_id')
+      .eq('followed_id', me.id);
+    if (e2) {
+      console.error('circle incoming error:', e2);
+      $('circle-list').innerHTML = `<p class="small" style="color: var(--ink-muted);">Could not load your circle.</p>`;
+      return;
+    }
+    const incomingIds = new Set((incoming || []).map(r => r.follower_id));
+
+    const mutualIds = outgoingIds.filter(id => incomingIds.has(id));
+    const countEl = $('circle-count');
+    countEl.textContent = mutualIds.length + (mutualIds.length === 1 ? ' friend' : ' friends');
+
+    const listEl = $('circle-list');
+    if (!mutualIds.length) {
+      listEl.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🌱</div>
+          <div class="title">Just you so far.</div>
+          <div class="body">Share your invite link above. When a friend signs up through it, they'll show up here automatically.</div>
+        </div>
+      `;
+      return;
+    }
+
+    const { data: profiles, error: e3 } = await sb
+      .from('profiles')
+      .select('id, handle, display_name, city, initials')
+      .in('id', mutualIds);
+    if (e3) {
+      console.error('circle profiles error:', e3);
+      listEl.innerHTML = `<p class="small" style="color: var(--ink-muted);">Could not load profiles.</p>`;
+      return;
+    }
+    listEl.innerHTML = (profiles || []).map(p => `
+      <div class="card mb-sm" style="display: flex; align-items: center; gap: 12px;">
+        <div class="avatar">${escapeHTML(p.initials || initialsFrom(p.display_name))}</div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-weight: 600; color: var(--ink);">${escapeHTML(p.display_name || p.handle)}</div>
+          <div class="small" style="color: var(--ink-muted);">@${escapeHTML(p.handle)}${p.city ? ' · ' + escapeHTML(p.city) : ''}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function shareInviteLink() {
+    const url = inviteLinkForMe();
+    if (!url) return;
+    const text = `Join my Life Update: circle. A tiny once-a-month update from your friends. ${url}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Life Update:', text, url });
+        return;
+      } catch (e) {
+        // user cancelled, fall through to copy
+      }
+    }
+    await copyInviteLink();
+  }
+
+  async function copyInviteLink() {
+    const url = inviteLinkForMe();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Invite link copied');
+    } catch (e) {
+      // Fallback: show the URL so user can long-press copy
+      prompt('Copy your invite link:', url);
+    }
+  }
+
+  async function processPendingInvite() {
+    if (!me) return;
+    const inviterId = localStorage.getItem('pending_invite_id');
+    if (!inviterId) return;
+    if (inviterId === me.id) {
+      localStorage.removeItem('pending_invite_id');
+      return;
+    }
+    debug('processing pending invite from ' + inviterId);
+    try {
+      // Confirm the inviter exists (RLS allows authenticated to read profiles)
+      const { data: inviter, error: e0 } = await sb
+        .from('profiles')
+        .select('id, display_name, handle')
+        .eq('id', inviterId)
+        .maybeSingle();
+      if (e0 || !inviter) {
+        debug('inviter not found, dropping invite');
+        localStorage.removeItem('pending_invite_id');
+        return;
+      }
+      // Create mutual follow records (auto-mutual via invite)
+      const { error: e1 } = await sb.from('follows').insert([
+        { follower_id: me.id, followed_id: inviter.id },
+        { follower_id: inviter.id, followed_id: me.id }
+      ]);
+      // Ignore duplicate-key errors; the link is idempotent
+      if (e1 && !e1.message.includes('duplicate')) {
+        console.error('mutual follow error:', e1);
+      }
+      localStorage.removeItem('pending_invite_id');
+      showToast(`Connected with ${inviter.display_name || '@' + inviter.handle}`);
+    } catch (err) {
+      console.error('processPendingInvite failed:', err);
+      localStorage.removeItem('pending_invite_id');
+    }
+  }
+
   // ============ SETTINGS ============
   function openSettings() {
     if (!me) return;
@@ -1517,9 +1687,26 @@
     }
   }
 
+  function captureInviteParam() {
+    // Capture ?invite=<uuid> from URL and stash for later. Done before auth so
+    // it survives the magic-link redirect.
+    const params = new URLSearchParams(window.location.search);
+    const inviteId = params.get('invite');
+    if (inviteId && /^[0-9a-f-]{36}$/i.test(inviteId)) {
+      localStorage.setItem('pending_invite_id', inviteId);
+      debug('captured invite id: ' + inviteId.slice(0, 8) + '…');
+      // Strip the param from the URL so it doesn't linger
+      params.delete('invite');
+      const newSearch = params.toString();
+      const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+      window.history.replaceState(null, '', newUrl);
+    }
+  }
+
   async function init() {
     debug('init: start');
     debug('url: ' + window.location.href.slice(0, 120));
+    captureInviteParam();
     const hash = window.location.hash;
     debug('hash: ' + (hash ? (hash.slice(0, 60) + (hash.length > 60 ? '…' : '')) : 'none'));
 
@@ -1620,6 +1807,7 @@
       }
       debug('profile loaded: ' + profile.handle);
       me = profile;
+      await processPendingInvite();
       showScreen('feed');
       loadFeed().catch(err => {
         console.error('[onAuthed] loadFeed error:', err);
