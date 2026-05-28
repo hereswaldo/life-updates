@@ -1811,7 +1811,29 @@
     // Magic-link return: hash carries access_token + refresh_token. Process synchronously
     // and short-circuit on success so we never race with getSession().
     if (hash && hash.includes('access_token')) {
+      // Detect Supabase auth errors that come back in the hash (otp_expired, etc.)
+      if (hash.includes('error=')) {
+        const hp = new URLSearchParams(hash.slice(1));
+        const errCode = hp.get('error_code') || hp.get('error') || 'unknown';
+        const errDesc = hp.get('error_description') || '';
+        debug('hash carries auth error: ' + errCode + ' / ' + errDesc);
+        window.history.replaceState(null, '', window.location.pathname);
+        showScreen('signin');
+        showToast(errCode === 'otp_expired'
+          ? 'That magic link expired. Send a new one.'
+          : 'Sign-in failed: ' + errCode);
+        return;
+      }
+
       debug('hash has access_token, clearing stale storage');
+      // Commit to this auth flow BEFORE any awaits. This prevents the 6s safety
+      // timeout from kicking us to signin while setSession is still talking to
+      // Supabase. setSession can legitimately take 8-15s on a cold cold-start
+      // of a free-tier project.
+      authHandled = true;
+      const loadingMsg = document.querySelector('#screen-loading p.small');
+      if (loadingMsg) loadingMsg.textContent = 'Signing you in…';
+
       clearSupabaseLocalStorage();
       const hashParams = new URLSearchParams(hash.slice(1));
       const access_token = hashParams.get('access_token');
@@ -1819,21 +1841,29 @@
       debug('access_token: ' + (access_token ? 'present (' + access_token.length + ' chars)' : 'MISSING'));
       debug('refresh_token: ' + (refresh_token ? 'present' : 'MISSING'));
       if (access_token && refresh_token) {
+        // Gentle progress nudge after 5s so the screen doesn't look frozen
+        const slowNudge = setTimeout(() => {
+          if (loadingMsg) loadingMsg.textContent = 'Still connecting to Supabase…';
+        }, 5000);
         try {
-          debug('calling setSession...');
+          debug('calling setSession (no timeout)...');
           const { data, error } = await sb.auth.setSession({ access_token, refresh_token });
+          clearTimeout(slowNudge);
           if (error) throw error;
           debug('setSession OK, session: ' + (data?.session ? 'yes' : 'no'));
           window.history.replaceState(null, '', window.location.pathname);
-          // Short-circuit: drive onAuthed directly with the session we just got.
-          // Do NOT fall through to getSession() — that path can race and time out
-          // even though we are authenticated.
-          if (data?.session && !authHandled) {
-            authHandled = true;
+          if (data?.session) {
             await onAuthed(data.session);
+          } else {
+            // setSession returned no session — odd, but treat as failure
+            authHandled = false;
+            showScreen('signin');
+            showToast('Sign-in did not complete. Try a new magic link.');
           }
           return;
         } catch (err) {
+          clearTimeout(slowNudge);
+          authHandled = false; // reset so the user can try again
           debug('setSession FAILED: ' + (err.message || err));
           showScreen('signin');
           showToast('Sign-in failed: ' + (err.message || 'unknown'));
@@ -1841,6 +1871,7 @@
         }
       } else {
         debug('hash present but tokens missing — showing signin');
+        authHandled = false;
         showScreen('signin');
         return;
       }
