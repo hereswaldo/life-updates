@@ -657,6 +657,7 @@
           <div class="field-error" id="signin-error" style="display:none;"></div>
           <button class="btn btn-primary mt-md" id="signin-btn" onclick="signIn()">Send magic link</button>
           <p class="small center mt-md">No password to forget. Click the link in your email and you're in.</p>
+          <p class="small center mt-md" style="color: var(--ink-muted); font-size: 11px;"><a href="#" onclick="event.preventDefault(); showDebugLog();" style="color: var(--ink-muted); text-decoration: underline;">show last auth log</a></p>
         </div>
       </div>
 
@@ -1688,18 +1689,58 @@
     }
   }
 
-  const DEBUG_MODE = window.location.search.includes('debug=1');
+  // Auto-enable debug mode whenever we're in the magic-link return flow so users
+  // can see what happened if auth fails. Otherwise hidden behind ?debug=1.
+  const DEBUG_MODE =
+    window.location.search.includes('debug=1') ||
+    (window.location.hash || '').includes('access_token');
   function debug(msg) {
     console.log(msg);
+    const time = new Date().toISOString().slice(11, 19);
+    // Persist the last 50 lines across reloads so we can still see what happened
+    // even after replaceState or navigating to signin.
+    try {
+      const buf = JSON.parse(localStorage.getItem('debug_log') || '[]');
+      buf.push(`[${time}] ${msg}`);
+      while (buf.length > 50) buf.shift();
+      localStorage.setItem('debug_log', JSON.stringify(buf));
+    } catch (e) {}
     if (!DEBUG_MODE) return;
     const el = $('loading-debug');
     if (el) {
       el.style.display = 'block';
-      const time = new Date().toISOString().slice(11, 19);
       el.textContent += `[${time}] ${msg}\n`;
       el.scrollTop = el.scrollHeight;
     }
   }
+
+  function showDebugLog() {
+    try {
+      const buf = JSON.parse(localStorage.getItem('debug_log') || '[]');
+      const txt = buf.join('\n') || '(no debug log captured)';
+      // Create or reuse a modal-style overlay
+      let overlay = document.getElementById('debug-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'debug-overlay';
+        overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; padding:24px; overflow:auto; color:#fff; font-family:monospace; font-size:11px; white-space:pre-wrap; word-break:break-all;';
+        const close = document.createElement('button');
+        close.textContent = 'Close';
+        close.style.cssText = 'position:sticky; top:0; padding:8px 14px; background:#C04F2D; color:#fff; border:none; border-radius:6px; cursor:pointer; margin-bottom:12px; font-family:sans-serif;';
+        close.onclick = () => overlay.remove();
+        overlay.appendChild(close);
+        const pre = document.createElement('div');
+        pre.id = 'debug-overlay-text';
+        overlay.appendChild(pre);
+        document.body.appendChild(overlay);
+      }
+      document.getElementById('debug-overlay-text').textContent = txt;
+    } catch (e) {
+      alert('Could not read debug log: ' + e.message);
+    }
+  }
+  // expose for inline onclick / console
+  window.showDebugLog = showDebugLog;
 
   function captureInviteParam() {
     // Capture ?invite=<uuid> from URL and stash for later. Done before auth so
