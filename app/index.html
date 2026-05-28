@@ -927,7 +927,66 @@
   // ============ CONFIG ============
   const SUPABASE_URL = 'https://gcdpnwpsiibpllkmmtfs.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_5W7JcC3jtRILqm_6OGsd8Q_Rnp0tUY-';
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const SUPABASE_STORAGE_KEY = 'sb-gcdpnwpsiibpllkmmtfs-auth-token';
+  // detectSessionInUrl disabled: we process the magic-link hash manually and
+  // bypass setSession's internal GET /auth/v1/user call which can hang
+  // indefinitely on free-tier projects with cold auth services.
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      detectSessionInUrl: false,
+      persistSession: true,
+      autoRefreshToken: true,
+      storageKey: SUPABASE_STORAGE_KEY,
+    }
+  });
+
+  function parseJwt(token) {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const pad = (4 - base64.length % 4) % 4;
+      base64 += '='.repeat(pad);
+      const json = atob(base64);
+      // handle UTF-8 properly
+      const decoded = decodeURIComponent(json.split('').map(c =>
+        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      ).join(''));
+      return JSON.parse(decoded);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Build a Session object from the URL hash tokens without making any network
+  // calls. Writes to localStorage so supabase-js picks it up automatically.
+  function buildSessionFromTokens(access_token, refresh_token) {
+    const payload = parseJwt(access_token);
+    if (!payload || !payload.sub) {
+      throw new Error('Invalid access_token JWT');
+    }
+    const now = Math.floor(Date.now() / 1000);
+    const session = {
+      access_token,
+      refresh_token,
+      expires_in: Math.max(0, (payload.exp || now + 3600) - now),
+      expires_at: payload.exp || (now + 3600),
+      token_type: 'bearer',
+      user: {
+        id: payload.sub,
+        email: payload.email || '',
+        aud: payload.aud || 'authenticated',
+        role: payload.role || 'authenticated',
+        app_metadata: payload.app_metadata || { provider: 'email', providers: ['email'] },
+        user_metadata: payload.user_metadata || {},
+        email_confirmed_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    };
+    localStorage.setItem(SUPABASE_STORAGE_KEY, JSON.stringify(session));
+    return session;
+  }
 
   // ============ STATE ============
   let me = null;            // current user's profile row
@@ -1841,30 +1900,20 @@
       debug('access_token: ' + (access_token ? 'present (' + access_token.length + ' chars)' : 'MISSING'));
       debug('refresh_token: ' + (refresh_token ? 'present' : 'MISSING'));
       if (access_token && refresh_token) {
-        // Gentle progress nudge after 5s so the screen doesn't look frozen
-        const slowNudge = setTimeout(() => {
-          if (loadingMsg) loadingMsg.textContent = 'Still connecting to Supabase…';
-        }, 5000);
         try {
-          debug('calling setSession (no timeout)...');
-          const { data, error } = await sb.auth.setSession({ access_token, refresh_token });
-          clearTimeout(slowNudge);
-          if (error) throw error;
-          debug('setSession OK, session: ' + (data?.session ? 'yes' : 'no'));
+          debug('bypass: parsing JWT + writing session to localStorage...');
+          const session = buildSessionFromTokens(access_token, refresh_token);
+          debug('session built for user: ' + session.user.id.slice(0, 8) + '… (' + (session.user.email || 'no email') + ')');
           window.history.replaceState(null, '', window.location.pathname);
-          if (data?.session) {
-            await onAuthed(data.session);
-          } else {
-            // setSession returned no session — odd, but treat as failure
-            authHandled = false;
-            showScreen('signin');
-            showToast('Sign-in did not complete. Try a new magic link.');
-          }
+          // Deliberately do NOT call sb.auth.setSession() — its internal
+          // GET /auth/v1/user can hang and would hold the auth lock,
+          // blocking the getSession() calls our queries need. localStorage
+          // has the session; supabase-js will pick it up on the next read.
+          await onAuthed(session);
           return;
         } catch (err) {
-          clearTimeout(slowNudge);
-          authHandled = false; // reset so the user can try again
-          debug('setSession FAILED: ' + (err.message || err));
+          authHandled = false;
+          debug('hash auth bypass FAILED: ' + (err.message || err));
           showScreen('signin');
           showToast('Sign-in failed: ' + (err.message || 'unknown'));
           return;
