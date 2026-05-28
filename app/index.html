@@ -4,6 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Life Update:</title>
+<script>
+  // Hard fallback: if the app is still on the loading screen after 5s for any
+  // reason (supabase-js never loaded, JS crashed silently, network hung), force
+  // the signin screen. Independent of every other script on the page.
+  window.__hardFallback = setTimeout(function() {
+    var loading = document.getElementById('screen-loading');
+    var signin = document.getElementById('screen-signin');
+    if (loading && loading.classList.contains('active') && signin) {
+      console.warn('[hard fallback] forcing signin after 5s');
+      loading.classList.remove('active');
+      signin.classList.add('active');
+    }
+  }, 5000);
+</script>
 <style>
   :root {
     --cream: #FAF6EE;
@@ -1716,6 +1730,8 @@
   async function init() {
     debug('init: start');
     debug('url: ' + window.location.href.slice(0, 120));
+    // Clear the head-script hard fallback now that JS is running
+    if (window.__hardFallback) { clearTimeout(window.__hardFallback); window.__hardFallback = null; }
     captureInviteParam();
     const hash = window.location.hash;
     debug('hash: ' + (hash ? (hash.slice(0, 60) + (hash.length > 60 ? '…' : '')) : 'none'));
