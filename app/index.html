@@ -866,17 +866,30 @@
           <div class="tagline">your circle</div>
         </div>
 
-        <div class="feed-header">
-          <div class="month">Add friends</div>
+        <!-- Waiting on you: people who added you, you haven't added back -->
+        <div id="waiting-section" style="display: none; margin-top: 8px;">
+          <div class="feed-header" style="margin-bottom: 8px;">
+            <div class="month" style="font-size: 20px;">Waiting on you</div>
+          </div>
+          <div id="waiting-list"></div>
         </div>
 
-        <div class="card mb-md">
-          <p class="small mb-xs" style="font-weight: 600; color: var(--ink);">How it works</p>
-          <p class="small" style="line-height: 1.55;">Life Update<span style="color: var(--accent);">:</span> is invite-only. Share your personal link with the friends you actually want to keep up with. When they sign up via your link, you are automatically connected and can see each other's posts.</p>
+        <div class="feed-header" style="margin-top: 16px;">
+          <div class="month">Invite a friend</div>
         </div>
+
+        <p class="small mb-sm" style="line-height: 1.55; color: var(--ink-soft);">Share your link with the friends you want to keep up with. When they sign up through it, you connect automatically.</p>
 
         <button class="btn btn-accent mb-sm" onclick="shareInviteLink()" id="friends-share-btn">📨 Share my invite link</button>
         <button class="btn btn-secondary" onclick="copyInviteLink()">Copy link instead</button>
+
+        <div style="margin-top: 28px;">
+          <div class="feed-header" style="margin-bottom: 8px;">
+            <div class="month" style="font-size: 22px;">Find someone</div>
+          </div>
+          <input class="input mb-sm" id="friends-search" placeholder="Search by name or @handle" oninput="searchFriendsDebounced()" autocomplete="off" />
+          <div id="search-results"></div>
+        </div>
 
         <div style="margin-top: 28px;">
           <div class="feed-header" style="margin-bottom: 8px;">
@@ -1595,55 +1608,69 @@
   async function openFriends() {
     if (!me) return;
     showScreen('friends');
-    await loadCircle();
+    if ($('friends-search')) $('friends-search').value = '';
+    if ($('search-results')) $('search-results').innerHTML = '';
+    await loadFriendState();
+    await renderFriendsTab();
   }
 
-  async function loadCircle() {
-    // Find profiles that are mutual with me: I follow them AND they follow me
-    const { data: outgoing, error: e1 } = await sb
-      .from('follows')
-      .select('followed_id')
-      .eq('follower_id', me.id);
-    if (e1) {
-      console.error('circle outgoing error:', e1);
-      $('circle-list').innerHTML = `<p class="small" style="color: var(--ink-muted);">Could not load your circle.</p>`;
+  async function renderFriendsTab() {
+    await renderWaitingOnYou();
+    await renderCircle();
+  }
+
+  async function renderWaitingOnYou() {
+    const section = $('waiting-section');
+    const list = $('waiting-list');
+    if (!section || !list) return;
+    const ids = [...friendState.incoming];
+    if (!ids.length) {
+      section.style.display = 'none';
       return;
     }
-    const outgoingIds = (outgoing || []).map(r => r.followed_id);
-
-    const { data: incoming, error: e2 } = await sb
-      .from('follows')
-      .select('follower_id')
-      .eq('followed_id', me.id);
-    if (e2) {
-      console.error('circle incoming error:', e2);
-      $('circle-list').innerHTML = `<p class="small" style="color: var(--ink-muted);">Could not load your circle.</p>`;
+    const { data, error } = await sb
+      .from('profiles')
+      .select('id, handle, display_name, city, initials')
+      .in('id', ids);
+    if (error || !data || !data.length) {
+      section.style.display = 'none';
       return;
     }
-    const incomingIds = new Set((incoming || []).map(r => r.follower_id));
+    section.style.display = 'block';
+    list.innerHTML = data.map(p => `
+      <div class="card mb-sm" style="display: flex; align-items: center; gap: 12px;">
+        <div class="avatar">${escapeHTML(p.initials || initialsFrom(p.display_name))}</div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-weight: 600; color: var(--ink);">${escapeHTML(p.display_name || p.handle)}</div>
+          <div class="small" style="color: var(--ink-muted);">added you · @${escapeHTML(p.handle)}</div>
+        </div>
+        <button class="btn btn-accent" style="width: auto; padding: 8px 14px; font-size: 13px;" onclick="addUser('${p.id}')">Add back</button>
+      </div>
+    `).join('');
+  }
 
-    const mutualIds = outgoingIds.filter(id => incomingIds.has(id));
-    const countEl = $('circle-count');
-    countEl.textContent = mutualIds.length + (mutualIds.length === 1 ? ' friend' : ' friends');
-
+  async function renderCircle() {
     const listEl = $('circle-list');
+    const countEl = $('circle-count');
+    const mutualIds = [...friendState.mutuals];
+    if (countEl) countEl.textContent = mutualIds.length + (mutualIds.length === 1 ? ' friend' : ' friends');
+
     if (!mutualIds.length) {
       listEl.innerHTML = `
         <div class="empty-state">
           <div class="icon">🌱</div>
           <div class="title">Just you so far.</div>
-          <div class="body">Share your invite link above. When a friend signs up through it, they'll show up here automatically.</div>
+          <div class="body">Share your invite link above, or search for a friend by name or @handle.</div>
         </div>
       `;
       return;
     }
 
-    const { data: profiles, error: e3 } = await sb
+    const { data: profiles, error } = await sb
       .from('profiles')
       .select('id, handle, display_name, city, initials')
       .in('id', mutualIds);
-    if (e3) {
-      console.error('circle profiles error:', e3);
+    if (error) {
       listEl.innerHTML = `<p class="small" style="color: var(--ink-muted);">Could not load profiles.</p>`;
       return;
     }
@@ -1654,9 +1681,13 @@
           <div style="font-weight: 600; color: var(--ink);">${escapeHTML(p.display_name || p.handle)}</div>
           <div class="small" style="color: var(--ink-muted);">@${escapeHTML(p.handle)}${p.city ? ' · ' + escapeHTML(p.city) : ''}</div>
         </div>
+        <button class="btn-ghost" style="background:none; border:none; color: var(--ink-muted); font-size: 18px; cursor: pointer; padding: 4px 8px;" onclick="if(confirm('Remove ${escapeHTML(p.display_name || p.handle)} from your circle?')) removeUser('${p.id}')" title="Remove">×</button>
       </div>
     `).join('');
   }
+
+  // legacy alias for any older calls
+  async function loadCircle() { await loadFriendState(); await renderFriendsTab(); }
 
   async function shareInviteLink() {
     const url = inviteLinkForMe();
@@ -1695,32 +1726,131 @@
     }
     debug('processing pending invite from ' + inviterId);
     try {
-      // Confirm the inviter exists (RLS allows authenticated to read profiles)
-      const { data: inviter, error: e0 } = await sb
+      const { data: inviter } = await sb
         .from('profiles')
         .select('id, display_name, handle')
         .eq('id', inviterId)
         .maybeSingle();
-      if (e0 || !inviter) {
+      if (!inviter) {
         debug('inviter not found, dropping invite');
         localStorage.removeItem('pending_invite_id');
         return;
       }
-      // Create mutual follow records (auto-mutual via invite)
-      const { error: e1 } = await sb.from('follows').insert([
-        { follower_id: me.id, followed_id: inviter.id },
-        { follower_id: inviter.id, followed_id: me.id }
-      ]);
-      // Ignore duplicate-key errors; the link is idempotent
-      if (e1 && !e1.message.includes('duplicate')) {
-        console.error('mutual follow error:', e1);
+      // Call server-side RPC that atomically inserts both follow directions.
+      // RLS prevents us from doing this client-side because we can't be the
+      // follower in the (inviter -> invitee) row.
+      const { error } = await sb.rpc('accept_invite', { inviter_uuid: inviter.id });
+      if (error) {
+        debug('accept_invite RPC failed: ' + error.message);
+        // Fallback: at least add the inviter so they show up as pending
+        await sb.from('follows').insert({ follower_id: me.id, followed_id: inviter.id }).then(() => {}, () => {});
+        showToast(`Asked ${inviter.display_name || '@' + inviter.handle} to connect`);
+      } else {
+        showToast(`Connected with ${inviter.display_name || '@' + inviter.handle}`);
       }
       localStorage.removeItem('pending_invite_id');
-      showToast(`Connected with ${inviter.display_name || '@' + inviter.handle}`);
     } catch (err) {
       console.error('processPendingInvite failed:', err);
       localStorage.removeItem('pending_invite_id');
     }
+  }
+
+  // ============ FRIEND STATE ============
+  let friendState = { mutuals: new Set(), outgoing: new Set(), incoming: new Set() };
+
+  async function loadFriendState() {
+    if (!me) return;
+    const [outRes, inRes] = await Promise.all([
+      sb.from('follows').select('followed_id').eq('follower_id', me.id),
+      sb.from('follows').select('follower_id').eq('followed_id', me.id),
+    ]);
+    const out = new Set((outRes.data || []).map(r => r.followed_id));
+    const inc = new Set((inRes.data || []).map(r => r.follower_id));
+    const mutuals = new Set([...out].filter(id => inc.has(id)));
+    const pendingOut = new Set([...out].filter(id => !inc.has(id)));
+    const pendingIn = new Set([...inc].filter(id => !out.has(id)));
+    friendState = { mutuals, outgoing: pendingOut, incoming: pendingIn };
+  }
+
+  function relationshipWith(userId) {
+    if (friendState.mutuals.has(userId)) return 'mutual';
+    if (friendState.outgoing.has(userId)) return 'outgoing';
+    if (friendState.incoming.has(userId)) return 'incoming';
+    return 'none';
+  }
+
+  function actionButtonForRelationship(userId, rel) {
+    if (rel === 'mutual') {
+      return `<span class="small" style="color: var(--green); font-weight: 600;">In circle ✓</span>`;
+    }
+    if (rel === 'outgoing') {
+      return `<span class="small" style="color: var(--ink-muted);">Pending</span>`;
+    }
+    if (rel === 'incoming') {
+      return `<button class="btn btn-accent" style="width: auto; padding: 8px 14px; font-size: 13px;" onclick="addUser('${userId}')">Add back</button>`;
+    }
+    return `<button class="btn btn-accent" style="width: auto; padding: 8px 14px; font-size: 13px;" onclick="addUser('${userId}')">Add</button>`;
+  }
+
+  async function addUser(userId) {
+    if (!me || userId === me.id) return;
+    const wasIncoming = friendState.incoming.has(userId);
+    const { error } = await sb.from('follows').insert({ follower_id: me.id, followed_id: userId });
+    if (error && !error.message.toLowerCase().includes('duplicate')) {
+      showToast('Could not add: ' + error.message);
+      return;
+    }
+    await loadFriendState();
+    showToast(wasIncoming ? 'Added to your circle' : 'Added. Waiting for them to add you back.');
+    if ($('screen-friends').classList.contains('active')) await renderFriendsTab();
+  }
+
+  async function removeUser(userId) {
+    if (!me) return;
+    await sb.from('follows').delete()
+      .eq('follower_id', me.id).eq('followed_id', userId);
+    await loadFriendState();
+    showToast('Removed from your circle');
+    if ($('screen-friends').classList.contains('active')) await renderFriendsTab();
+  }
+
+  // ============ FRIEND SEARCH ============
+  let searchTimer = null;
+  function searchFriendsDebounced() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(searchFriends, 250);
+  }
+
+  async function searchFriends() {
+    const q = ($('friends-search')?.value || '').trim();
+    const resultsEl = $('search-results');
+    if (!resultsEl) return;
+    if (!q) { resultsEl.innerHTML = ''; return; }
+    const cleanQ = q.replace(/^@/, '').replace(/[%_]/g, '');
+    resultsEl.innerHTML = `<p class="small" style="color: var(--ink-muted); padding: 8px;">Searching…</p>`;
+    const { data, error } = await sb.from('profiles')
+      .select('id, handle, display_name, city, initials')
+      .neq('id', me.id)
+      .or(`handle.ilike.%${cleanQ}%,display_name.ilike.%${cleanQ}%`)
+      .limit(8);
+    if (error) {
+      resultsEl.innerHTML = `<p class="small" style="color: var(--accent); padding: 8px;">Search failed: ${escapeHTML(error.message)}</p>`;
+      return;
+    }
+    if (!data || !data.length) {
+      resultsEl.innerHTML = `<p class="small" style="color: var(--ink-muted); padding: 8px;">No matches for "${escapeHTML(q)}".</p>`;
+      return;
+    }
+    resultsEl.innerHTML = data.map(p => `
+      <div class="card mb-sm" style="display: flex; align-items: center; gap: 12px;">
+        <div class="avatar">${escapeHTML(p.initials || initialsFrom(p.display_name))}</div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-weight: 600; color: var(--ink);">${escapeHTML(p.display_name || p.handle)}</div>
+          <div class="small" style="color: var(--ink-muted);">@${escapeHTML(p.handle)}${p.city ? ' · ' + escapeHTML(p.city) : ''}</div>
+        </div>
+        ${actionButtonForRelationship(p.id, relationshipWith(p.id))}
+      </div>
+    `).join('');
   }
 
   // ============ SETTINGS ============
